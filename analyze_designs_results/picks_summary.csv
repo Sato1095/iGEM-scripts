@@ -1,0 +1,4 @@
+pick,peptide,composite_z,composite_rank,rank_pct,i_ptm,plddt,i_pae,rmsd,gravy,net_charge,acidic_frac,hydro_anchor_frac
+42.3  (best / top-ranked),SVEENMKEFEKMILG,7.109,8,99.7,0.828,0.913,3.726,0.412,-0.493,-2.75,0.267,0.4
+130.3 (full mimic),MEEFKKLWEELMKKA,6.683,57,97.2,0.789,0.899,4.424,0.775,-0.967,-0.72,0.267,0.4
+267.3 (minimal mimic),SEIEELWEELIEEAE,7.216,2,100.0,0.847,0.922,3.637,1.018,-0.753,-8.74,0.533,0.333
