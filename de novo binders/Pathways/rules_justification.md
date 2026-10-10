@@ -114,7 +114,8 @@ model cannot address the question it was built for. It is flagged
 ## 5. Checking the rules against the proteomics
 
 Up to here nothing has looked at data. The rules now get compared with the
-Nutlin arm of `validation_both_arms_A549.csv`, node by node: the model
+MDM2-inhibition proteomics in `validation_nutlin_A549.csv`, node by node:
+the model
 "changes" a node if its state differs between the control and MDM2-degraded
 attractors, and that direction is compared with the measured call.
 

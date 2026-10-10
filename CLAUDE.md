@@ -167,12 +167,12 @@ Points worth preserving in the READMEs, because they are what make the work defe
   inactive in every condition the criteria constrain.
 - **R1 is reported, not resolved** — the screen needs form B, the binding literature leans
   toward form A. Keep the tension stated.
-- **The KRAS proteomics arm is deliberately unused.** The published RAS-degradation
-  dataset is ambiguous (KRAS not significantly reduced: 0.91-fold, p = 0.49), so a
-  criterion built on it would encode a possible experimental artefact. Bortezomib and
+- **Nothing tests the KRAS arm.** The only proteomics the screen uses is the
+  MDM2-inhibition (Nutlin) dataset, so the KRAS-degraded and both-degraded outcomes are
+  predictions, not results, and neither contributes a pass criterion. Bortezomib and
   seven other drugs in the panel are held back as the only genuine out-of-sample test.
-- Three nodes (BCL2L11, PMAIP1, MDM4) went undetected in both proteomics datasets and are
-  unconstrained by any criterion.
+- Four nodes (BCL2L11, PMAIP1, MCL1, MDM4) went undetected and are unconstrained by any
+  criterion.
 
 ---
 

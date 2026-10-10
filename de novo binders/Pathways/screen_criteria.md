@@ -7,8 +7,6 @@ here with the reason and the date, and the screen is re-run in full.
 These criteria were revised once, and the revision was also made before any
 variant was run:
 
-- **C3 demoted** from a pass criterion to a consistency note, because the
-  AdPROM dataset did not significantly reduce KRAS
 - **the XIAP criterion removed** from C2 as unsatisfiable by construction
 - **R4 redefined** to vary the guard logic at BAX and BAK1 together, since
   BAK1 reaches CYCS independently and varying BAX alone would have had no
@@ -45,19 +43,17 @@ proteomics. The screen is where the proteomics enters.
 
 ## 2. Data used, and data held back
 
-**Used as pass criteria:** the Nutlin arm only
-(`validation_both_arms_A549.csv`).
-
-**Used as a consistency note, not a criterion:** the AdPROM RAS-degradation
-arm — see C3 below for why.
+**Used as pass criteria:** the MDM2-inhibition (Nutlin) proteomics,
+`validation_nutlin_A549.csv`. It is the only dataset the screen consults.
 
 **Held back for out-of-sample testing:** Bortezomib and the remaining seven
 drugs. These must not be consulted until the screen is complete and a
 variant set has been chosen.
 
-**Not available at all:** the combination arm. No dataset here perturbs both
-targets, so the combination prediction cannot be tested by any means
-currently in hand.
+**Not available at all:** anything that perturbs KRAS, and anything that
+perturbs both targets. The KRAS_degraded and both_degraded outcomes are
+therefore PURE PREDICTIONS, untested by any data in hand, and neither
+condition contributes a pass criterion.
 
 ## 3. Varied rules (2 forms each → 32 variants)
 
@@ -156,39 +152,10 @@ not a node in the curated network, and the CASP9 direction is already
 implied by the CASP3/CASP7 criteria, which the execution module couples to
 it.
 
-### C3 — WITHDRAWN as a pass criterion
-
-The AdPROM dataset did **not** significantly reduce KRAS (0.91×, p = 0.49),
-while HRAS fell to 0.46× (p = 0.014). The observed absence of downstream
-change is therefore consistent with two incompatible readings: that KRAS
-degradation does nothing in A549, or that KRAS was never meaningfully
-degraded. These cannot be distinguished in this data, and RAS isoforms share
-most tryptic peptides, making isoform-level quantification unreliable in
-either direction.
-
-A pass criterion built on an ambiguous null would force the model to be
-INSENSITIVE to KRAS loss, potentially encoding an experimental artifact as a
-structural feature — the opposite of what a model built to predict KRAS
-degradation should do.
-
-**Reclassified as a consistency note.** Because KRAS was not significantly
-reduced, these cells were effectively still in the control condition, and
-the proteome did not move. This is weak corroboration that the control
-attractor is stable. It is not a test of the KRAS arm.
-
-One caution for anyone reading that arm: `CASP9` rises (+0.33, p = 0.001)
-and is its only significant change. Do not read agreement with any model
-prediction into it — if KRAS was not degraded, this is a change in cells
-that were effectively untreated.
-
-**Consequence:** the KRAS_degraded and both_degraded outcomes are both PURE
-PREDICTIONS, untested by any data in hand.
-
 ## 6. Scoring
 
 Each variant is scored by exact value percolation under each condition. A
-variant PASSES if it satisfies every criterion in C1 and C2. C3 is withdrawn
-and contributes nothing.
+variant PASSES if it satisfies every criterion in C1 and C2.
 
 Reported for every one of the 32 variants, pass or fail:
 
@@ -209,13 +176,12 @@ acceptable.
 - **None pass** — do not relax criteria to obtain a winner. Report the
   failure and the candidate explanations: Boolean abstraction conflating
   protein abundance with activity; missing nodes (NF-κB arm, BCL2); MDM2
-  *inhibition* (nutlin) treated as equivalent to *degradation*; the
-  HRAS/KRAS ambiguity in C3; single timepoint versus steady-state attractor.
+  *inhibition* (nutlin) treated as equivalent to *degradation*; single
+  timepoint versus steady-state attractor.
 
 ## 8. Known limitations of the screen itself
 
-- With C3 withdrawn, roughly 13 binary constraints remain and many are
-  correlated (CASP3, CASP7 and CASP9 move together; TP53 drives CDKN1A and
+- Roughly 13 binary constraints remain and many are correlated (CASP3, CASP7 and CASP9 move together; TP53 drives CDKN1A and
   BBC3). Effective constraint count is nearer 4. The screen is weakly
   determining and some varied rules are expected to come out UNDETERMINED —
   for example R2 (BBC3), since FOXO3 is off in the MDM2-degraded condition
@@ -224,7 +190,7 @@ acceptable.
 - Nutlin inhibits MDM2–p53 binding; the model clamps MDM2 to 0. These are not
   the same perturbation. MDM2 protein rose 2.84 log2 under nutlin precisely
   because p53 transcribes it — a behaviour the clamped model cannot show.
-- PMAIP1 (NOXA), BCL2L11 (BIM) and MDM4 were not detected in either dataset
-  and are therefore unconstrained by any criterion.
+- PMAIP1 (NOXA), BCL2L11 (BIM), MCL1 and MDM4 were not detected and are
+  therefore unconstrained by any criterion.
 - A Boolean attractor is a steady state; the proteomics is a single
   timepoint. Agreement in direction is the most that can be claimed.

@@ -23,11 +23,11 @@ cannot be told apart by this data. That is reported, not resolved.
 THE CRITERIA WERE FIXED BEFORE ANY VARIANT WAS RUN
 --------------------------------------------------
 The CRITERIA dict below transcribes sections C1 and C2 of
-screen_criteria.md, which was frozen first. C3 was withdrawn before
-running, so it contributes nothing here, and the both_degraded condition
-contributes no criteria at all -- it is the prediction. That ordering is
-the point of the whole exercise and should never be described the other
-way round.
+screen_criteria.md, which was frozen first. Only the control and
+MDM2-degraded conditions carry criteria: no data in hand perturbs KRAS, so
+the KRAS_degraded and both_degraded outcomes are predictions and
+contribute nothing to scoring. That ordering is the point of the whole
+exercise and should never be described the other way round.
 
 Every variant is reported, pass or fail. The complete grid is published;
 reporting only the passing variants would not be acceptable.

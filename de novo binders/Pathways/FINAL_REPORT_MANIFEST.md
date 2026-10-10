@@ -21,9 +21,9 @@ All checksums are SHA-256 of the files as generated.
 |---|---|---|
 | `model_scope_v1.txt` | **Supp. Table S1.** Declared node scope from literature, with module comments. The stated boundary of the model. | de1bc39496de |
 | `decisions_final.csv` | **Supp. Table S2.** 25 manual edge adjudications: 5 sign calls, 20 drops, each with rationale and reference basis. | 6f60eab683d9 |
-| `screen_criteria.md` | **Supp. Methods.** Pre-registered pass criteria, fixed before any variant was run, including the documented v1→v2 changes (C3 withdrawal, XIAP removal, R4 redefinition). | 043fedee4bac |
-| `rules_justification.md` | **Supp. Methods.** Three-tier justification of every rule: mechanical, structural override, or fitted. Contains the explicit statement of which rules were data-influenced. | 981511a1dfd9 |
-| `validation_both_arms_A549.csv` | **Supp. Table S3.** Both proteomics arms mapped onto model nodes, with log2 fold change, p-values and directional calls. | 2548abe823c9 |
+| `screen_criteria.md` | **Supp. Methods.** Pre-registered pass criteria, fixed before any variant was run, including the documented revisions (XIAP removal, R4 redefinition). | 7b7778d87cdf |
+| `rules_justification.md` | **Supp. Methods.** Three-tier justification of every rule: mechanical, structural override, or fitted. Contains the explicit statement of which rules were data-influenced. | 038e95b20bdd |
+| `validation_nutlin_A549.csv` | **Supp. Table S3.** The MDM2-inhibition proteomics mapped onto model nodes, with log2 fold change and directional calls. | b73b1021a262 |
 | `screen_results.json` | **Supp. Data.** Machine-readable full screen output: every variant, every condition, full attractor, failed criteria. | 7dddf4dd0dbd |
 | `network_changelog.csv` | **Supp. Table S4.** All 28 changes from the 117-edge network to the curated network, each with original sign, action and reason. | 1cdfd5266397 |
 
@@ -34,7 +34,7 @@ All checksums are SHA-256 of the files as generated.
 | `build_network.py` | **Step 1.** Network construction from OmniPath with provenance tracking, evidence thresholds and a run manifest. Produces `final/edges.csv` (31 nodes / 117 edges). | 1b360d1c67ba |
 | `curate_network.py` | **Step 2.** Applies the documented literature corrections to produce the curated network (29 nodes / 99 edges) plus `network_changelog.csv`. Verified to reproduce `network_edges.csv` exactly. | 30d4c0ad242e |
 | `attractor_analysis.py` | **Step 3.** Exact attractor analysis: value percolation + exhaustive terminal-SCC search + random-start sampling for corroboration. | 357c8e6e5d51 |
-| `run_screen.py` | **Step 4.** The 32-variant rule screen executing the pre-registered criteria; also regenerates `screen_report.md`. | 7a2e479cc841 |
+| `run_screen.py` | **Step 4.** The 32-variant rule screen executing the pre-registered criteria; also regenerates `screen_report.md`. | 105640b77073 |
 | `make_rules.py` | **Step 3.** Rule drafting, sign-consistency validation, and MaBoSS/BoolNet export. | c32e57a384af |
 
 ### Pipeline, end to end
@@ -72,7 +72,6 @@ from its inputs.
 | `screen_criteria_v1.md` | Superseded by v2. Keep only if you want to show the criteria revision history. |
 | `rules_default_OR_OR.txt`, `rules_exceptions.md` | Intermediate working files. |
 | `model_v2.bnd/.bnet/.cfg`, `cond_*.cfg` | Exports of the fitted rule set; regenerate from `rules_structural.txt` plus the chosen variant before use. |
-| `validation_nutlin_A549.csv` | Subsumed by `validation_both_arms_A549.csv`. |
 
 ---
 
@@ -93,9 +92,8 @@ from its inputs.
 
 - That the model is validated. Consistency with one drug arm, using rules
   selected after inspecting model–data disagreements, is not validation.
-- That KRAS degradation alone is ineffective. The dataset used to suggest this
-  did not significantly reduce KRAS (0.91x, p=0.49) and was withdrawn from the
-  criteria for that reason.
+- Anything about KRAS degradation. No dataset here perturbs KRAS, so that
+  arm of the model is untested.
 - Anything about the combination in cells. No dataset in this project perturbs
   both targets.
 

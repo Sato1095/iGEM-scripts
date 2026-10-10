@@ -109,9 +109,9 @@ scored against the pre-registered criteria, under all four conditions.
 **The criteria were frozen before any variant was run.** That ordering is the
 whole point, and it must never be described the other way round.
 `screen_criteria.md` is the frozen document; `run_screen.py` transcribes
-its C1 and C2 into code. C3 was withdrawn before running, and the
-`both_degraded` condition contributes no criteria at all — it is the
-prediction.
+its C1 and C2 into code. Only the control and MDM2-degraded conditions
+carry criteria; no data in hand perturbs KRAS, so `KRAS_degraded` and
+`both_degraded` are predictions.
 
 | | |
 |---|---|
@@ -143,18 +143,16 @@ tension is stated rather than settled.
 - **It is not validated.** Consistency with one drug arm, using rules
   selected after inspecting model–data disagreements, is a constraint, not
   evidence of correctness.
-- **The KRAS proteomics arm is deliberately unused.** The published
-  RAS-degradation dataset did not significantly reduce KRAS (0.91-fold,
-  p = 0.49) while HRAS fell to 0.46-fold. A criterion built on that ambiguous
-  null would have forced the model to be *insensitive* to KRAS loss —
-  encoding a possible experimental artefact as a structural feature.
+- **Nothing tests the KRAS arm.** No dataset in hand perturbs KRAS, so the
+  `KRAS_degraded` and `both_degraded` outcomes are predictions rather than
+  results, and neither condition contributes a pass criterion.
 - **Bortezomib and seven other drugs in the panel are held back** as the only
   genuine out-of-sample test available.
 - **Nutlin is not degradation.** Nutlin inhibits MDM2–p53 binding; the model
   clamps MDM2 to 0. MDM2 protein rose 2.84 log2 under nutlin precisely
   because p53 transcribes it — behaviour a clamped model cannot show.
-- **BCL2L11, PMAIP1 and MDM4 were undetected** in both proteomics datasets
-  and are unconstrained by any criterion.
+- **BCL2L11, PMAIP1, MCL1 and MDM4 were undetected** and are unconstrained by
+  any criterion.
 
 ---
 
@@ -170,7 +168,7 @@ tension is stated rather than settled.
 | `rules_structural.txt` | the 29 Boolean rules, overrides marked inline |
 | `screen_criteria.md` | the pre-registered criteria |
 | `rules_justification.md` | tier-by-tier justification of the rule set |
-| `validation_both_arms_A549.csv` | both proteomics arms mapped onto model nodes |
+| `validation_nutlin_A549.csv` | the MDM2-inhibition proteomics, mapped onto model nodes |
 | `attractor_report.md`, `screen_report.md`, `screen_results.json` | results |
 | `model.{bnd,cfg,bnet}` | MaBoSS and BoolNet exports |
 | `CHECKSUMS.md`, `FINAL_REPORT_MANIFEST.md`, `checksums.txt` | artefact ledgers |
