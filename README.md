@@ -30,56 +30,74 @@ the source of most of the workarounds in the MD scripts.
 
 ## The pipeline, in order
 
-### 1 · Warhead — de novo MDM2 binders
+### 1 · Designing the warhead → `de novo binders/`
 
 **Interface analysis.** Three hydrophobic sub-pockets mapped from 1YCR, the
 native p53–MDM2 complex, around the p53 anchors Phe19, Trp23 and Leu26.
 
-**Generation** → `de novo binders/Collab Result/`
-RFdiffusion (500 backbones) → ProteinMPNN (4 sequences each) → AlphaFold
-Multimer. **2,000 candidates.**
+**Generation** (`Collab Result/`). RFdiffusion produced 500 backbones,
+ProteinMPNN designed 4 sequences onto each, and AlphaFold Multimer folded
+every one — **2,000 candidates**.
 
-**Three-stage selection funnel** → `de novo binders/Filter Pipeline.py/`
+**Selection** (`Filter Pipeline.py/`), in three stages:
 
-| stage | what it ranks on | top candidate |
+| stage | ranks on | top candidate |
 |---|---|---|
 | 1 · composite Z-score | AlphaFold confidence metrics | **Z1 (42.3)** |
-| 2 · confidence filter + pharmacophore flags | the above, plus Trp and the i, i+4, i+7 anchor register | **Z2 (267.3)** |
+| 2 · + pharmacophore flags | the above, plus Trp and the i, i+4, i+7 anchor register | **Z2 (267.3)** |
 | 3 · interface geometry and chemistry | atomic coordinates: apolar BSA, pocket occupancy, contacts, net charge | **Z3 (131.2)** |
 
-**Why the sequence matters.** Z2 carries net charge −8 — chemically
-implausible for a hydrophobic groove — but confidence metrics rank it highly
-because they score predicted geometry and are blind to chemistry. Stage 3
-exists to catch that, and does: Z2 fails at the chemistry gate.
+Each stage exists because the one before it missed something. Z1 tops the
+confidence ranking but has no tryptophan and no anchor register. Z2 has
+both — and a net charge of −8, which is not something you put in a
+hydrophobic groove. Neither problem is visible to the metrics that chose
+them, which is why the third stage reads atomic coordinates instead.
 
 ```
 2,000 candidates → 1,275 fill 3/3 pockets → 409 pass all gates → 18 meet or exceed PMI
 ```
 
-Stages 1 and 2 are one script run two ways; stage 3 is a second script. They
-are kept apart deliberately. That the funnel evolved through three attempts,
-each written because the previous one missed something, is the argument the
-Model page makes — merging them would destroy the evidence for it.
+Stages 1 and 2 are one script run two ways; stage 3 is a second script.
+They are kept apart deliberately — that the funnel evolved through three
+attempts is the argument the Model page makes, and merging them would
+destroy the evidence for it.
 
-### 2 · Assembly and validation → `de novo binders/MD simulations/`
+### 2 · Simulating the assembled degraders → `de novo binders/MD simulations/`
 
 Four constructs — **PMI-PROTAC, PZ1, PZ2, PZ3** — simulated as ternary
-complexes with MDM2 and **VBC** (VHL + ElonginB + ElonginC).
+complexes with MDM2 and **VBC** (VHL + ElonginB + ElonginC). GROMACS 2022,
+AMBER99SB-ILDN, 100 ns each; VHL with pHIF1 alone was run to 150 ns.
 
-**Headline result:** PZ3 carries the best MDM2 warhead and makes the most
-contacts with the target, but forms the *weakest* induced MDM2–VHL interface.
-PZ1 is the reverse, and is the leading degrader candidate. **Target binding
-and degradation efficiency are separable.**
+**The result that matters:** PZ3 carries the best MDM2 warhead and makes the
+most contacts with the target, but forms the *weakest* induced MDM2–VHL
+interface. PZ1 is the reverse, and is the leading degrader candidate.
+**Target binding and degradation efficiency are separable** — a good binder
+is not automatically a good degrader.
 
-### 3 · Pathways — Boolean model → `de novo binders/Pathways/`
+### 3 · Asking whether the combination works → `de novo binders/Pathways/`
 
-A separate strand, asking whether degrading MDM2 and KRAS together kills an
-A549 cell that survives either alone.
+A separate strand, and a different question: does degrading MDM2 and KRAS
+*together* kill an A549 cell that survives either one alone? Answered with a
+Boolean model of apoptotic commitment, built from OmniPath and curated by
+hand.
 
 ```
 117 edges → 29 nodes / 99 edges after curation → 29 rules
-→ 1 provable fixed point per condition → 32 variants, 4 pass, 4 show synergy
+→ 1 provable fixed point per condition → 32 rule variants screened
 ```
+
+**The result:** 4 of the 32 variants satisfy every pre-registered criterion.
+Separately, 4 show true synergy — the combination killing where neither
+single agent does. MDM2 degradation alone never kills, in any variant.
+
+Those two sets of four overlap in only two members, and the reason is the
+honest difficulty of the whole strand. Synergy requires BCL-XL to act as a
+coincidence detector *and* PUMA to be p53-driven rather than also
+FOXO3-driven. The criteria can distinguish the first; they cannot
+distinguish the second, because FOXO3 is off in every condition they
+constrain. So two of the four acceptable rule sets predict synergy and two
+do not, and the data cannot say which pair is right. No dataset in hand
+tests the combination either, so this is a prediction, not a result.
 
 ---
 
@@ -93,48 +111,47 @@ de novo binders/
   Pathways/            network build, curation, rules, attractors, variant screen
 ```
 
-Each directory has its own README covering what the scripts did, what they
-took in, what they produced, and — for the funnel — what each stage could not
-catch and which later stage addressed it.
+Each folder has its own README explaining that part of the work in more
+detail.
 
 ---
 
 ## Environment
 
-**Python.** The pathways pipeline is standard library only, Python 3.8+. The
-selection funnel needs more:
+**Python.** The pathways pipeline runs on the standard library alone
+(Python 3.8+). The selection funnel needs more: `z-score_filter.py` is also
+standard-library-only, the figure scripts and `analyze_designs.py` need
+matplotlib, pandas, numpy and biopython, and `rank_binders.py` additionally
+needs freesasa.
 
-| script | needs |
-|---|---|
-| `z-score_filter.py` | standard library only |
-| `rank_binders.py` | biopython, freesasa, numpy, pandas |
-| `analyze_designs.py` | biopython, matplotlib, pandas |
-| `make_verdict_figures.py`, `make_distribution_figure.py` | matplotlib, numpy, pandas |
+**Molecular dynamics.** GROMACS 2022, AMBER99SB-ILDN, TIP3P water. pHIF1 as
+a free peptide is parametrised with GAFF2 via ACPYPE, which needs
+AmberTools 24 and Open Babel. The SLURM scripts carry one cluster's module
+names and partitions, so they will need adapting elsewhere.
 
-**Molecular dynamics.** GROMACS 2022, AMBER99SB-ILDN, TIP3P water. pHIF1 as a
-free peptide is parametrised with GAFF2 via ACPYPE, which needs AmberTools 24
-and Open Babel. The SLURM scripts carry one cluster's module names and
-partitions and will need adapting elsewhere.
-
-**Structures.** `.pdb` inputs are published alongside the scripts in this
-repository; the funnel's stage 3 reads the 2,000 AlphaFold Multimer PDBs via
-`--pdbdir`.
+**Structures.** The `.pdb` inputs are published alongside the scripts,
+including the 2,000 AlphaFold Multimer designs that stage 3 scores.
 
 ---
 
-## Things that are easy to get wrong
+## Limitations we state openly
 
-**Replicates.** One trajectory per system, no replicates. Stated as a
-limitation on the wiki; it should stay stated.
+**One trajectory per system, no replicates.** Stated as a limitation on the
+wiki, and it should stay stated.
 
-**KRAS.** The dry lab designed MDM2 binders. The KRAS strand is an unstapled
-SOS1 helix that gave a clear negative result (ipTM 0.27, no RMSD plateau) and
-is presented as future work.
+**The Boolean model is not validated.** Its criteria were built from the
+same proteomics that prompted us to examine those rules, so passing them
+constrains the model rather than confirming it. Nothing in hand tests the
+KRAS arm or the combination.
 
-**Buried surface area.** The BSA figures — apolar Å² per residue, and the PMI
-benchmark — are not yet settled. The numbers in the scripts are what the
-selection ran on; do not treat them as fixed reference values in
-documentation until the team has resolved how they are presented.
+**The KRAS strand of the structural work gave a negative result.** It is an
+unstapled SOS1 helix with ipTM 0.27 and no RMSD plateau, presented as future
+work. The binders the dry lab designed are for MDM2.
+
+**The buried surface area figures are not settled.** The numbers in the
+scripts are what the selection actually ran on, but how they are presented
+is still being resolved, so they should not be quoted as fixed reference
+values yet.
 
 ---
 
@@ -157,6 +174,6 @@ GitLab repository, which is what the wiki links to.
 Documentation and repository organisation were done with the help of
 **Claude Code** (Anthropic). The analysis itself, every threshold, every
 curation decision and every result is the team's own — the assistance was
-limited to writing the READMEs and code comments, reorganising the files, and
-checking the scripts against each other and against the wiki. No logic,
-threshold, filter, ordering or default parameter was changed in the process.
+limited to writing the READMEs and code comments, reorganising the files,
+and checking the scripts against each other. No logic, threshold, filter,
+ordering or default parameter was changed in the process.
