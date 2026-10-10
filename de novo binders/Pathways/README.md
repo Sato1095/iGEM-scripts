@@ -196,6 +196,41 @@ read when the node set is declared.
 
 ---
 
+## R4 is undetermined only because BAX and BAK1 were excluded
+
+This is the most important caveat on the screen, and it was established
+*after* the screen was run.
+
+`BAX` (+0.70) and `BAK1` (+0.71) are unambiguous UP calls in the Nutlin arm.
+Neither was made a pass criterion, for the reason recorded in
+`screen_criteria.md` §5 before any variant ran: these nodes mean
+"pore-forming and active", abundance is not activity, and the data pulls
+both ways — BAX and BAK1 rise while `CYCS` is unchanged, so a criterion on
+either would settle the guard logic on a reading the cytochrome c
+measurement does not support.
+
+That exclusion is doing real work. Scoring the committed results against
+the alternative:
+
+| | passing variants | R4 | passing *and* synergistic |
+|---|---|---|---|
+| as scored | **4** | undetermined | 2 |
+| if `BAX = 1` were a C2 criterion | 2 | **form B** | 1 |
+| if `BAK1 = 1` were a C2 criterion | 2 | **form B** | 1 |
+
+BAX and BAK1 give the same answer independently and together. So "R4 is
+undetermined" should be read as *undetermined given that abundance was not
+accepted as a proxy for activity* — not as *the data cannot speak to it*.
+The data can; we judged the reading unsafe.
+
+**The criteria were not amended and the screen was not re-run.** Changing a
+pass criterion after seeing results is what the freeze in
+`screen_criteria.md` exists to prevent, and tightening one to sharpen a
+result is no different from relaxing one to rescue it. If the team later
+decides BAX/BAK1 abundance is a fair proxy, the route its own status block
+prescribes is a dated amendment to the criteria with the reason, followed
+by a full re-run — not an edit to this result.
+
 ## Known issues
 
 The scripts, their outputs and the supporting documents are consistent with
