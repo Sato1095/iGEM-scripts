@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# run_pipeline.sh -- regenerate every artifact of the Boolean model, in order.
+# POSIX equivalent of run_pipeline.ps1; the two run the same five steps with
+# the same arguments.
+#
+# Usage:  ./run_pipeline.sh  [python-executable]
+#
+# Python 3.8+ and the standard library only -- no packages to install.
+#
+# Steps 1, 2, 4 and 5 regenerate their outputs from their inputs. Step 3 only
+# CHECKS the rules: rules_structural.txt was hand-written from a draft and is
+# an input here, not something this pipeline can produce. It is the one place
+# human judgement enters, and make_rules.py exists to hold that judgement to
+# the network.
+#
+# run01/raw must be present. It is the pinned OmniPath snapshot, and without
+# it step 1 re-downloads from a database that has moved on since -- see the
+# warning the preflight prints below.
+set -euo pipefail
+PY="${1:-python3}"
+
+for f in model_scope_v1.txt decisions_final.csv rules_structural.txt \
+         build_network.py curate_network.py make_rules.py \
+         attractor_analysis.py run_screen.py; do
+  [ -f "$f" ] || { echo "missing required input: $f" >&2; exit 1; }
+done
+[ -d run01/raw ] || echo "WARNING: run01/raw not found; OmniPath will be re-downloaded" >&2
+"$PY" --version
+
+echo; echo "=== STEP 1: build network from OmniPath ==="
+"$PY" build_network.py --anchors KRAS MDM2 \
+  --sinks CASP3 CASP7 PARP1 CDKN1A --nodes model_scope_v1.txt \
+  --min-resources 2 --min-references 1 --min-curation-effort 5 \
+  --terminal-sinks --decisions decisions_final.csv --cache run01/raw -d final
+
+echo; echo "=== STEP 2: literature corrections ==="
+"$PY" curate_network.py --in final/edges.csv --out .
+
+echo; echo "=== STEP 3: validate rules against network ==="
+"$PY" make_rules.py --edges network_edges.csv --nodes network_nodes.csv \
+  --check rules_structural.txt --fixed KRAS MDM2 MDM4 \
+  --export-maboss model.bnd --export-boolnet model.bnet
+
+echo; echo "=== STEP 4: exact attractor analysis ==="
+"$PY" attractor_analysis.py --rules rules_structural.txt \
+  --clamp control:KRAS=1,MDM2=1,MDM4=1 \
+  --clamp MDM2_degraded:KRAS=1,MDM2=0,MDM4=1 \
+  --clamp KRAS_degraded:KRAS=0,MDM2=1,MDM4=1 \
+  --clamp both_degraded:KRAS=0,MDM2=0,MDM4=1 \
+  --samples 120 --steps 6000 --out attractor_report.md
+
+echo; echo "=== STEP 5: 32-variant screen ==="
+"$PY" run_screen.py --rules rules_structural.txt \
+  --out-json screen_results.json --out-md screen_report.md
+
+echo; echo "=== STEP 6: checksums ==="
+sha256sum network_edges.csv network_nodes.csv network_changelog.csv \
+  rules_structural.txt attractor_report.md screen_report.md \
+  screen_results.json decisions_final.csv model_scope_v1.txt | tee checksums.txt
+echo; echo "PIPELINE COMPLETE"

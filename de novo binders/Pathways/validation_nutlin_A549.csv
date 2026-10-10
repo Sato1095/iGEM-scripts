@@ -1,0 +1,32 @@
+gene,module,nutlin_log2,MDM2i_call
+BBC3,BH3-only,0.762,UP
+BAD,BH3-only,0.134,unchanged
+PMAIP1,BH3-only,,not detected
+BCL2L11,BH3-only,,not detected
+KRAS,MAPK arm,0.1,unchanged
+MAPK1,MAPK arm,-0.109,unchanged
+MAP2K1,MAPK arm,-0.248,unchanged
+RAF1,MAPK arm,-0.255,unchanged
+MAPK3,MAPK arm,-0.287,unchanged
+GSK3B,PI3K arm,0.36,UP
+PIK3R1,PI3K arm,0.088,unchanged
+PTEN,PI3K arm,0.068,unchanged
+FOXO3,PI3K arm,0.023,unchanged
+AKT1,PI3K arm,-0.002,unchanged
+PIK3CA,PI3K arm,-0.07,unchanged
+BAK1,effector,0.712,UP
+BAX,effector,0.697,UP
+CYCS,effector,0.268,unchanged
+DIABLO,effector,0.04,unchanged
+APAF1,execution,0.816,UP
+CASP7,execution,0.078,unchanged
+CASP3,execution,0.039,unchanged
+XIAP,execution,-0.02,unchanged
+CASP9,execution,-0.418,DOWN
+PARP1,execution,-0.446,DOWN
+BCL2L1,guard,0.776,UP
+MCL1,guard,,not detected
+MDM2,p53 module,2.845,UP
+TP53,p53 module,2.239,UP
+CDKN1A,p53 module,2.133,UP
+MDM4,p53 module,,not detected
