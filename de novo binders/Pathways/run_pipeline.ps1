@@ -1,7 +1,13 @@
 # run_pipeline.ps1 -- regenerate every artifact of the Boolean model project.
+# Windows equivalent of run_pipeline.sh; the two run the same five steps with
+# the same arguments.
 #
 #   .\run_pipeline.ps1
 #   .\run_pipeline.ps1 -Refetch          # re-download from OmniPath (not advised)
+#
+# -Refetch bypasses the pinned snapshot and queries OmniPath live. The result
+# will not match the committed network, because OmniPath updates
+# continuously. It exists for deliberate re-derivation, not for routine runs.
 #
 # Requires: Python 3.8+ (standard library only; no packages to install).
 #

@@ -68,7 +68,7 @@ run takes several chunks; GROMACS exits on its own once `nsteps` is reached.
 
 Both scripts call `genion` with `-neutral` and no `-conc`: the box carries
 only the counter-ions needed to neutralise the system, and no background
-salt. These are not 0.15 M NaCl simulations.
+salt.
 
 ### Run length
 

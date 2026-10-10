@@ -3,6 +3,55 @@
 build_network.py -- build a signed, directed, provenance-tracked network for a
 KRAS / MDM2 -> apoptosis Boolean model, entirely from OmniPath.
 
+STEP 1 OF 5 in the pathways pipeline. Produces final/edges.csv, which
+make_network_v2.py curates into the model network.
+
+HOW WE RAN IT
+-------------
+    python3 build_network.py --anchors KRAS MDM2 \\
+        --sinks CASP3 CASP7 PARP1 CDKN1A --nodes model_scope_v1.txt \\
+        --min-resources 2 --min-references 1 --min-curation-effort 5 \\
+        --terminal-sinks --decisions decisions_final.csv \\
+        --cache run01/raw -d final
+
+Passing --nodes puts this in SCOPE MODE: rather than growing a network
+outwards from the anchors, it takes the 31 symbols declared in
+model_scope_v1.txt as the model's stated boundary, fetches every qualified
+edge among them, and ranks nodes just outside the scope as candidate
+additions for review. The boundary is a reviewable modelling decision
+instead of a side effect of search parameters. The k-hop expansion code
+below is therefore unused by our runs.
+
+Result: 203,001 interactions fetched, 28,146 qualified at the evidence
+thresholds, 117 edges among the 31 declared nodes, 0 left needing review
+after the 25 decisions in decisions_final.csv were applied.
+
+THE OMNIPATH SNAPSHOT IS PINNED
+-------------------------------
+--cache run01/raw points at the archived API responses, each stored with
+its URL, fetch timestamp, byte count and SHA-256 in a .meta.json beside
+it. fetch() reuses a cached file whenever one matches the request, so the
+network rebuilds against the snapshot rather than against live OmniPath.
+
+OmniPath updates continuously. Re-fetching would give a different network
+and would silently invalidate everything downstream, so do not run this
+with --refresh, and do not delete run01/raw.
+
+INPUT
+-----
+    run01/raw/            the archived OmniPath responses
+    model_scope_v1.txt    the 31 declared nodes
+    decisions_final.csv   25 reviewed sign calls, each with a rationale
+
+OUTPUT (into final/)
+--------------------
+    edges.csv                  117 qualified edges, with provenance
+    nodes.csv                  31 nodes with role and degree
+    review_queue.csv           edges still unsigned or conflicting (0)
+    suggestions.csv            40 ranked candidate additions, not applied
+    scope_not_in_omnipath.csv  declared nodes with no qualified edge (0)
+    manifest.json              every URL, checksum, parameter and count
+
 NO BIOLOGY IS HARD-CODED IN THIS FILE.
 
 The only inputs that encode a scientific choice arrive from outside the code:
@@ -586,6 +635,16 @@ def main():
     ap.add_argument("--datasets", default="omnipath,kinaseextra,pathwayextra,"
                                           "collectri")
     ap.add_argument("--organism", default="9606")
+    # EVIDENCE THRESHOLDS. An edge is kept only if OmniPath reports it as
+    # directed, from at least --min-resources independent resources, with at
+    # least --min-references references, at curation effort >= the floor.
+    # Every rejection is written to excluded_edges.csv with its reason, so
+    # the thresholds can be audited rather than taken on trust.
+    #
+    # Our runs used 2 / 1 / 5. The first two are the defaults here; the
+    # curation-effort floor is NOT -- it defaults to 0 and is supplied as
+    # --min-curation-effort 5 by run_pipeline.sh. Running this script on
+    # its defaults gives a larger, noisier network than the committed one.
     ap.add_argument("--min-resources", type=int, default=2)
     ap.add_argument("--min-references", type=int, default=1)
     ap.add_argument("--keep-undirected", action="store_true")
@@ -594,6 +653,8 @@ def main():
                          "thin tail of an aggregated interactome is mostly "
                          "single-report noise")
 
+    # The next three steer the k-hop expansion, which SCOPE MODE does not
+    # use -- our runs declared the node set with --nodes instead.
     ap.add_argument("--hops", type=int, default=2,
                     help="undirected radius around the anchors")
     ap.add_argument("--hub-degree", type=int, default=250,
@@ -612,6 +673,10 @@ def main():
                     help="drop enzyme-substrate records that rest only on "
                          "these resources (default: text-mining readers, which "
                          "routinely swap enzyme and substrate). '' disables.")
+    # Used in our runs. A readout is an endpoint of the model, so letting it
+    # feed back into the network would make the thing being measured also a
+    # cause. This is what removes CASP3->PARP1, which is in turn why PARP1
+    # cannot serve as a cleavage readout and is dropped in step 2.
     ap.add_argument("--terminal-sinks", action="store_true",
                     help="drop out-edges of sink nodes: a node declared as a "
                          "model READOUT should not regulate the network "
@@ -638,6 +703,10 @@ def main():
     ap.add_argument("--expression", help="CSV with columns gene,value")
     ap.add_argument("--expression-min", type=float, default=1.0)
 
+    # decisions_final.csv. Each row needs a source, target, sign, PMID and
+    # rationale or it is refused and logged -- a sign cannot be changed here
+    # without a reason attached. pmid=from_edge means the call rests on
+    # references OmniPath already carries for that interaction.
     ap.add_argument("--decisions", help="reviewed sign calls (CSV)")
     ap.add_argument("--allow-manual-edges", action="store_true",
                     help="permit decisions.csv rows with status=ADD")

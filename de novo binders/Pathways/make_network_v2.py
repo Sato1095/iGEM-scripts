@@ -3,16 +3,52 @@
 make_network_v2.py -- derive network_v2 from the OmniPath-built network by
 applying the documented literature corrections found during rule construction.
 
+STEP 2 OF 5 in the pathways pipeline.
+
 Input : final/edges.csv           (output of build_network.py, 31 nodes/117 edges)
 Output: network_v2_edges.csv      (29 nodes / 99 edges)
         network_v2_nodes.csv
         network_v2_changelog.csv  (every change, with its reason)
 
+  python3 make_network_v2.py --in final/edges.csv --out .
+
 Every correction below was argued from biology or from database artefact, NOT
 from the proteomics. This script is the record of that step; before it existed
 the transformation was done ad hoc and Table 1 was not regenerable.
 
-  python3 make_network_v2.py --in final/edges.csv --out .
+WHAT THIS STEP CHANGES, AND WHY IT IS SEPARATE
+----------------------------------------------
+Step 1 applies evidence thresholds; it cannot tell a well-attested record
+from a well-attested record pointing the wrong way. Those survive into
+final/edges.csv and are caught here, by reading the edges rather than by
+counting their support.
+
+Together with the 25 decisions applied inside step 1, 40 edges were
+adjudicated by hand across the two steps -- the 15 below and those 25.
+They fall into five recurring failure modes of an aggregated interactome:
+
+  reverse records        the interaction is real, the direction inverted
+                         (APAF1->CYCS: cytochrome c is released from
+                         mitochondria, not produced by APAF1)
+  contradicted signs     a consensus sign that its own residue annotations
+                         contradict (AKT1->FOXO3 recorded as activation,
+                         when the phosphorylation excludes FOXO3 from the
+                         nucleus)
+  reciprocal records     one sequestration event recorded in both
+                         directions, which becomes a mutual-inhibition
+                         toggle in Boolean form
+  text-mining artefacts  records resting only on automated readers, which
+                         routinely swap enzyme and substrate
+  transcriptional        p53 firing an executioner caspase directly,
+  bypasses               skipping the mitochondrial step the model exists
+                         to resolve
+
+Three of the 15 are not error corrections but modelling choices: the
+drops of TP53->KRAS, AKT1->MDM4 and MDM2->MDM4 exist because those nodes
+are clamped inputs, so in-edges to them can never fire.
+
+Every change, including the node merge and removal below, is written to
+network_v2_changelog.csv with its original sign and its reason: 28 rows.
 """
 
 import argparse
@@ -59,11 +95,19 @@ DROP_NODES = {
           "a cleavage readout. Apoptosis is read from CASP3/CASP7 instead",
 }
 
+# PIK3CA (p110) and PIK3R1 (p85) are recorded activating each other, which
+# in Boolean form latches ON for good as soon as either fires. They are
+# obligate partners in one complex, so they become one node.
 MERGE = {"PIK3CA": "PI3K", "PIK3R1": "PI3K"}
 MERGE_REASON = ("p85 and p110 are recorded with mutual activation, which locks "
                 "permanently ON once either fires; merged into a single PI3K "
                 "node")
 
+# The one edge restored against the evidence thresholds. KRAS->PI3K is
+# single-resource in OmniPath and so was rejected in step 1, which left the
+# entire PI3K/AKT arm with no route from the perturbed node -- the model
+# could not have answered the question it was built for. It is tagged
+# provenance=MANUAL_ADD in network_v2_edges.csv; keep that tag visible.
 MANUAL_ADD = [{
  "source": "KRAS", "target": "PI3K", "sign": "activates",
  "sign_basis": "manual_decision", "mechanism": "binding to p110alpha RBD",

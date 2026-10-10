@@ -3,10 +3,34 @@
 make_rules.py -- draft, validate and export the Boolean rules for a network
 built by build_network.py.
 
+STEP 3 OF 5 in the pathways pipeline, and the only step with a manual
+stage in the middle of it.
+
 The edge list cannot tell you whether two activators combine with AND or OR.
 That is the modeller's call, so this tool drafts a starting point, marks the
 nodes where the default is probably wrong, and then CHECKS your hand-edited
 rules back against the network.
+
+WHAT WE RAN
+-----------
+Drafted once, hand-edited the draft into rules_v3_unfitted.txt, then used
+check mode from then on:
+
+    python3 make_rules.py --edges network_v2_edges.csv \
+        --nodes network_v2_nodes.csv --check rules_v3_unfitted.txt \
+        --fixed KRAS MDM2 MDM4 \
+        --export-maboss model_v3.bnd --export-boolnet model_v3.bnet
+
+29 rules, 0 problems, 17 warnings. The 17 are all of one kind: an edge in
+the network that no rule uses. That number matters, because the check is
+what keeps a deliberate omission distinguishable from an accident -- each
+of those 17 is accounted for by an OVERRIDE comment in
+rules_v3_unfitted.txt naming the edge and why it is unused. An eighteenth
+would mean something was dropped by mistake.
+
+Exports model_v3.bnd + model_v3.cfg (MaBoSS) and model_v3.bnet (BoolNet).
+Neither is read by steps 4 and 5, which parse the rules file directly;
+they are there for anyone wanting to open the model in those tools.
 
   1. draft     python3 make_rules.py --edges network_v2_edges.csv \\
                    --nodes network_v2_nodes.csv \\
@@ -170,7 +194,19 @@ def inputs_of(expr):
 
 
 def monotonicity(expr, inputs, trials=400):
-    """Classify each input's effect by evaluating the rule both ways."""
+    """Classify each input's effect by evaluating the rule both ways.
+
+    For each input, hold it low then high over assignments of the others
+    and see which way the output can move. An activator must be able to
+    turn the node on somewhere, an inhibitor must be able to turn it off.
+    "mixed" means it does both depending on context, "inert" that it never
+    changes the outcome -- usually masked by another term.
+
+    Exhaustive at 12 or fewer free inputs (2^12 = 4096 assignments). Above
+    that it samples `trials` random assignments instead, so a disagreement
+    could in principle be missed on the widest rules. Seeded from --seed
+    (default 0), so a given rules file always gives the same verdict.
+    """
     code = compile(expr, "<rule>", "eval")
     others = [x for x in inputs]
     result = {}

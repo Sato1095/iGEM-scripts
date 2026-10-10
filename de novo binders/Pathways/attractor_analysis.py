@@ -3,6 +3,28 @@
 attractor_analysis.py -- exact and sampled attractor analysis for a Boolean
 rule file, with the method documented in the output.
 
+STEP 4 OF 5 in the pathways pipeline. Writes attractor_report.md.
+
+WHAT WE RAN, AND WHAT CAME OUT
+------------------------------
+The four conditions of the experiment, clamping the two perturbed inputs
+and the constant MDM4:
+
+    control         KRAS=1 MDM2=1 MDM4=1
+    MDM2_degraded   KRAS=1 MDM2=0 MDM4=1
+    KRAS_degraded   KRAS=0 MDM2=1 MDM4=1
+    both_degraded   KRAS=0 MDM2=0 MDM4=1
+
+In every one of the four, percolation fixed all 29 nodes within six
+rounds. That is the strongest result available here: each condition has a
+single fixed point, it is the only attractor, and it is reachable from
+every one of the 2^26 = 67,108,864 states of the free subspace. No cyclic
+attractors exist, and the outcome does not depend on the initial state.
+
+Because percolation determined everything, the terminal-SCC search below
+had no residual subspace left to search. Random-start sampling was run
+alongside and agreed in all four conditions.
+
 Two independent procedures are run per condition:
 
   (1) VALUE PERCOLATION (exact, deterministic)
@@ -58,7 +80,21 @@ def inputs_of(expr):
 
 
 def percolate(rules, code, clamp, max_free=18):
-    """Smallest trap space containing the clamped subcube. Exact."""
+    """Smallest trap space containing the clamped subcube. Exact.
+
+    Repeatedly: for each still-free node, evaluate its rule over every
+    assignment of its free inputs. If the answer never varies, the node is
+    constant no matter what the rest of the network does, so fix it and go
+    round again. What remains when nothing more fixes is a subcube closed
+    under the update -- no trajectory can leave it.
+
+    max_free caps how many free inputs a single rule may have before it is
+    skipped this round (2^18 evaluations). No rule in this model comes near
+    that; the cap only guards against a pathological rule elsewhere.
+
+    This is a proof, not a sample: if every node fixes, the resulting state
+    is the unique attractor of the clamped subspace.
+    """
     fixed = dict(clamp)
     rounds = 0
     while True:

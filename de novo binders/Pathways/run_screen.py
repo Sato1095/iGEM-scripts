@@ -3,18 +3,48 @@
 run_screen.py -- enumerate rule variants and score them against the
 pre-registered criteria in screen_criteria_v2.md.
 
-Method: for each of the 2^5 = 32 variants, and each of the 4 conditions, the
-attractor is computed by EXACT value percolation (clamp the perturbed inputs,
-then repeatedly fix any node whose function has become constant over every
-assignment of its still-free inputs; iterate to a fixpoint). Where percolation
-determines every node, the resulting state is provably the unique attractor,
-reachable from every initial state. No sampling is involved.
+STEP 5 OF 5 in the pathways pipeline. Writes screen_results.json and
+regenerates screen_report.md.
 
-Criteria are read from this file's CRITERIA dict, which transcribes
-screen_criteria_v2.md sections C1 and C2. C3 was withdrawn before running.
-The both_degraded condition contributes no criteria; it is the prediction.
+WHAT CAME OUT
+-------------
+4 of the 32 variants satisfy every criterion, and 4 of the 32 show true
+synergy -- the combination killing where neither single agent does. These
+are overlapping but DIFFERENT sets of four, sharing two members; do not
+read one figure as the other. Across the whole grid: apoptosis in 0/32
+under control, 0/32 under MDM2 degradation alone, 24/32 under KRAS
+degradation alone, and 28/32 under the combination.
 
-Every variant is reported, pass or fail.
+All four passing variants need R1 form B and R5 form B. R2 is left
+undetermined -- two passers carry each form -- because FOXO3 is off in
+every condition the criteria constrain, so the two forms of the PUMA rule
+cannot be told apart by this data. That is reported, not resolved.
+
+THE CRITERIA WERE FIXED BEFORE ANY VARIANT WAS RUN
+--------------------------------------------------
+The CRITERIA dict below transcribes sections C1 and C2 of
+screen_criteria_v2.md, which was frozen first. C3 was withdrawn before
+running, so it contributes nothing here, and the both_degraded condition
+contributes no criteria at all -- it is the prediction. That ordering is
+the point of the whole exercise and should never be described the other
+way round.
+
+Every variant is reported, pass or fail. The complete grid is published;
+reporting only the passing variants would not be acceptable.
+
+METHOD
+------
+For each of the 2^5 = 32 variants, and each of the 4 conditions, the
+attractor is computed by EXACT value percolation (clamp the perturbed
+inputs, then repeatedly fix any node whose function has become constant
+over every assignment of its still-free inputs; iterate to a fixpoint).
+Where percolation determines every node, the resulting state is provably
+the unique attractor, reachable from every initial state. No sampling is
+involved.
+
+percolate() below duplicates the one in attractor_analysis.py. The two are
+kept separate so that step 4's exact-attractor result and step 5's screen
+do not share an implementation.
 """
 
 import argparse
@@ -28,6 +58,22 @@ IDENT = re.compile(r"\b(?!and\b|or\b|not\b|True\b|False\b)[A-Za-z_][A-Za-z0-9_]*
 
 
 # ---- the five varied rules (form A = default convention, form B = alternative)
+#
+# Form A is in every case what the "one activator / one inhibitor suffices"
+# convention produces from the edge list. Form B is the stated alternative.
+# These five were chosen because they are where the model disagreed with the
+# data -- an acknowledged contamination, recorded in screen_criteria_v2.md:
+# the screen tests which alternatives are consistent, not whether the model
+# was right in advance.
+#
+#   R1  BCL2L1   guard cleared by any one BH3-only protein (A), or only by
+#                BAD together with an activator (B, a coincidence detector)
+#   R2  BBC3     PUMA inducible by p53 or FOXO3 (A), or by p53 alone (B)
+#   R3  CDKN1A   p21 vetoed by GSK3B/MDM2/MAPK1 (A) or by MDM2 only (B)
+#   R4  BAX+BAK1 both guards must be absent (A) or either alone suffices (B);
+#                varied together because BAK1 reaches CYCS independently, so
+#                varying BAX alone would change nothing
+#   R5  TP53     held off by either suppressor (A) or only by both (B)
 VARIANTS = {
  "R1": {"A": {"BCL2L1": "not (BAD or BCL2L11 or BBC3 or PMAIP1 or TP53)"},
         "B": {"BCL2L1": "not (BAD and (BBC3 or PMAIP1))"}},

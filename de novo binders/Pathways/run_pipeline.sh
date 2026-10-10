@@ -1,6 +1,21 @@
 #!/usr/bin/env bash
-# run_pipeline.sh -- POSIX equivalent of run_pipeline.ps1
+# run_pipeline.sh -- regenerate every artifact of the Boolean model, in order.
+# POSIX equivalent of run_pipeline.ps1; the two run the same five steps with
+# the same arguments.
+#
 # Usage:  ./run_pipeline.sh  [python-executable]
+#
+# Python 3.8+ and the standard library only -- no packages to install.
+#
+# Steps 1, 2, 4 and 5 regenerate their outputs from their inputs. Step 3 only
+# CHECKS the rules: rules_v3_unfitted.txt was hand-written from a draft and is
+# an input here, not something this pipeline can produce. It is the one place
+# human judgement enters, and make_rules.py exists to hold that judgement to
+# the network.
+#
+# run01/raw must be present. It is the pinned OmniPath snapshot, and without
+# it step 1 re-downloads from a database that has moved on since -- see the
+# warning the preflight prints below.
 set -euo pipefail
 PY="${1:-python3}"
 
