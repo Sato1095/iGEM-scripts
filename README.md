@@ -124,19 +124,6 @@ repository; the funnel's stage 3 reads the 2,000 AlphaFold Multimer PDBs via
 
 ## Things that are easy to get wrong
 
-**Naming.** Use these consistently:
-
-| use | not |
-|---|---|
-| AETh3R | AETHER, AETH3R, Aether |
-| Z1 (42.3) · Z2 (267.3) · Z3 (131.2) | bare 42.3 / 267.3 / 131.2; "Z4"; 130.3 |
-| PZ1 · PZ2 · PZ3 · PMI-PROTAC | — |
-| VBC | "the VHL complex", where VBC is meant |
-| Dr. Alessio Ciulli | Alessandro Ciulli |
-
-**Scope.** We simulated MDM2·PROTAC·**VBC**. We did *not* model the Cullin-2 /
-Rbx1 scaffold, so any claim of the full CRL2^VHL assembly is wrong.
-
 **Replicates.** One trajectory per system, no replicates. Stated as a
 limitation on the wiki; it should stay stated.
 
