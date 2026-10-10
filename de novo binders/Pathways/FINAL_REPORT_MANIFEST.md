@@ -9,11 +9,11 @@ All checksums are SHA-256 of the files as generated.
 
 | file | role | sha256 (first 12) |
 |---|---|---|
-| `network_v2_edges.csv` | **Table 1.** The model network: 29 nodes, 99 signed directed edges, each with sign, sign basis, mechanism, resources, PMIDs, curation effort and provenance. | 38fd2a69f60a |
-| `network_v2_nodes.csv` | **Table 2.** Node list with role (input / intermediate / readout) and in/out degree. | 6f743d1572dd |
-| `rules_v3_unfitted.txt` | **Table 3.** Boolean rules. Every departure from the default convention is marked OVERRIDE with its reason inline. | 2d96124f1e8d |
-| `attractor_report.md` | **Table 4 / Figure 1.** Exact attractor per condition by value percolation. All 29 nodes determined in all four conditions; unique attractor provably reachable from all 2^26 states. | b50a4a60e7ab |
-| `screen_report.md` | **Table 5 / Figure 2.** Rule-variant screen: full 32-row grid, which rule forms are determined, failure modes, predictions of passing variants, discriminating experiment. | d73b8a2d402e |
+| `network_edges.csv` | **Table 1.** The model network: 29 nodes, 99 signed directed edges, each with sign, sign basis, mechanism, resources, PMIDs, curation effort and provenance. | 1e3c8bd2bc52 |
+| `network_nodes.csv` | **Table 2.** Node list with role (input / intermediate / readout) and in/out degree. | 341c3d5f9e92 |
+| `rules_structural.txt` | **Table 3.** Boolean rules. Every departure from the default convention is marked OVERRIDE with its reason inline. | 2d96124f1e8d |
+| `attractor_report.md` | **Table 4 / Figure 1.** Exact attractor per condition by value percolation. All 29 nodes determined in all four conditions; unique attractor provably reachable from all 2^26 states. | 2f8951d56012 |
+| `screen_report.md` | **Table 5 / Figure 2.** Rule-variant screen: full 32-row grid, which rule forms are determined, failure modes, predictions of passing variants, discriminating experiment. | d7c608f241b2 |
 
 ## TIER 2 — Supplementary methods and data
 
@@ -21,21 +21,21 @@ All checksums are SHA-256 of the files as generated.
 |---|---|---|
 | `model_scope_v1.txt` | **Supp. Table S1.** Declared node scope from literature, with module comments. The stated boundary of the model. | de1bc39496de |
 | `decisions_final.csv` | **Supp. Table S2.** 25 manual edge adjudications: 5 sign calls, 20 drops, each with rationale and reference basis. | 6f60eab683d9 |
-| `screen_criteria_v2.md` | **Supp. Methods.** Pre-registered pass criteria, fixed before any variant was run, including the documented v1→v2 changes (C3 withdrawal, XIAP removal, R4 redefinition). | cc829977c479 |
-| `rules_justification.md` | **Supp. Methods.** Three-tier justification of every rule: mechanical, structural override, or fitted. Contains the explicit statement of which rules were data-influenced. | 1b47438ea861 |
+| `screen_criteria.md` | **Supp. Methods.** Pre-registered pass criteria, fixed before any variant was run, including the documented v1→v2 changes (C3 withdrawal, XIAP removal, R4 redefinition). | 043fedee4bac |
+| `rules_justification.md` | **Supp. Methods.** Three-tier justification of every rule: mechanical, structural override, or fitted. Contains the explicit statement of which rules were data-influenced. | 981511a1dfd9 |
 | `validation_both_arms_A549.csv` | **Supp. Table S3.** Both proteomics arms mapped onto model nodes, with log2 fold change, p-values and directional calls. | 2548abe823c9 |
-| `screen_results.json` | **Supp. Data.** Machine-readable full screen output: every variant, every condition, full attractor, failed criteria. | 975e5d480d13 |
-| `network_v2_changelog.csv` | **Supp. Table S4.** All 28 changes from the 117-edge network to network_v2, each with original sign, action and reason. | 1cdfd5266397 |
+| `screen_results.json` | **Supp. Data.** Machine-readable full screen output: every variant, every condition, full attractor, failed criteria. | 7dddf4dd0dbd |
+| `network_changelog.csv` | **Supp. Table S4.** All 28 changes from the 117-edge network to the curated network, each with original sign, action and reason. | 1cdfd5266397 |
 
 ## TIER 3 — Code (repository / Zenodo)
 
 | file | role | sha256 (first 12) |
 |---|---|---|
-| `build_network.py` | **Step 1.** Network construction from OmniPath with provenance tracking, evidence thresholds and a run manifest. Produces `final/edges.csv` (31 nodes / 117 edges). | 23a636da85ba |
-| `make_network_v2.py` | **Step 2.** Applies the documented literature corrections to produce network_v2 (29 nodes / 99 edges) plus `network_v2_changelog.csv`. Verified to reproduce `network_v2_edges.csv` exactly. | 509203151fde |
-| `attractor_analysis.py` | **Step 3.** Exact attractor analysis: value percolation + exhaustive terminal-SCC search + random-start sampling for corroboration. | 576a1ece9a13 |
-| `run_screen.py` | **Step 4.** The 32-variant rule screen executing the pre-registered criteria; also regenerates `screen_report.md`. | 1de0d3e810be |
-| `make_rules.py` | **Step 3.** Rule drafting, sign-consistency validation, and MaBoSS/BoolNet export. | 695bdcdfd308 |
+| `build_network.py` | **Step 1.** Network construction from OmniPath with provenance tracking, evidence thresholds and a run manifest. Produces `final/edges.csv` (31 nodes / 117 edges). | 1b360d1c67ba |
+| `curate_network.py` | **Step 2.** Applies the documented literature corrections to produce the curated network (29 nodes / 99 edges) plus `network_changelog.csv`. Verified to reproduce `network_edges.csv` exactly. | 30d4c0ad242e |
+| `attractor_analysis.py` | **Step 3.** Exact attractor analysis: value percolation + exhaustive terminal-SCC search + random-start sampling for corroboration. | 357c8e6e5d51 |
+| `run_screen.py` | **Step 4.** The 32-variant rule screen executing the pre-registered criteria; also regenerates `screen_report.md`. | 7a2e479cc841 |
+| `make_rules.py` | **Step 3.** Rule drafting, sign-consistency validation, and MaBoSS/BoolNet export. | c32e57a384af |
 
 ### Pipeline, end to end
 
@@ -47,13 +47,13 @@ build_network.py   --anchors KRAS MDM2 --sinks CASP3 CASP7 PARP1 CDKN1A \
                    --nodes model_scope_v1.txt --min-resources 2 \
                    --min-references 1 --min-curation-effort 5 \
                    --terminal-sinks --decisions decisions_final.csv -d final
-make_network_v2.py --in final/edges.csv --out .
-make_rules.py      --edges network_v2_edges.csv --nodes network_v2_nodes.csv \
+curate_network.py --in final/edges.csv --out .
+make_rules.py      --edges network_edges.csv --nodes network_nodes.csv \
                    --fixed KRAS MDM2 MDM4 --out rules_draft.txt
-                   # hand-edited to rules_v3_unfitted.txt; overrides documented
+                   # hand-edited to rules_structural.txt; overrides documented
                    # inline and in rules_justification.md
-attractor_analysis.py --rules rules_v3_unfitted.txt --clamp ... --out attractor_report.md
-run_screen.py      --rules rules_v3_unfitted.txt \
+attractor_analysis.py --rules rules_structural.txt --clamp ... --out attractor_report.md
+run_screen.py      --rules rules_structural.txt \
                    --out-json screen_results.json --out-md screen_report.md
 ```
 
@@ -71,7 +71,7 @@ from its inputs.
 | `rules_v2.txt` | The hand-fitted rule set. Superseded by the screen, which does the same job by a stated procedure. Keep privately as a record. |
 | `screen_criteria_v1.md` | Superseded by v2. Keep only if you want to show the criteria revision history. |
 | `rules_default_OR_OR.txt`, `rules_exceptions.md` | Intermediate working files. |
-| `model_v2.bnd/.bnet/.cfg`, `cond_*.cfg` | Exports of the fitted rule set; regenerate from `rules_v3_unfitted.txt` plus the chosen variant before use. |
+| `model_v2.bnd/.bnet/.cfg`, `cond_*.cfg` | Exports of the fitted rule set; regenerate from `rules_structural.txt` plus the chosen variant before use. |
 | `validation_nutlin_A549.csv` | Subsumed by `validation_both_arms_A549.csv`. |
 
 ---

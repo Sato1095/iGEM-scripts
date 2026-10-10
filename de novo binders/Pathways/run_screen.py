@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 run_screen.py -- enumerate rule variants and score them against the
-pre-registered criteria in screen_criteria_v2.md.
+pre-registered criteria in screen_criteria.md.
 
 STEP 5 OF 5 in the pathways pipeline. Writes screen_results.json and
 regenerates screen_report.md.
@@ -23,7 +23,7 @@ cannot be told apart by this data. That is reported, not resolved.
 THE CRITERIA WERE FIXED BEFORE ANY VARIANT WAS RUN
 --------------------------------------------------
 The CRITERIA dict below transcribes sections C1 and C2 of
-screen_criteria_v2.md, which was frozen first. C3 was withdrawn before
+screen_criteria.md, which was frozen first. C3 was withdrawn before
 running, so it contributes nothing here, and the both_degraded condition
 contributes no criteria at all -- it is the prediction. That ordering is
 the point of the whole exercise and should never be described the other
@@ -62,7 +62,7 @@ IDENT = re.compile(r"\b(?!and\b|or\b|not\b|True\b|False\b)[A-Za-z_][A-Za-z0-9_]*
 # Form A is in every case what the "one activator / one inhibitor suffices"
 # convention produces from the edge list. Form B is the stated alternative.
 # These five were chosen because they are where the model disagreed with the
-# data -- an acknowledged contamination, recorded in screen_criteria_v2.md:
+# data -- an acknowledged contamination, recorded in screen_criteria.md:
 # the screen tests which alternatives are consistent, not whether the model
 # was right in advance.
 #
@@ -96,7 +96,7 @@ CONDITIONS = {
  "both_degraded":  {"KRAS": False, "MDM2": False, "MDM4": True},
 }
 
-# ---- pre-registered criteria (screen_criteria_v2.md, C1 and C2) -------------
+# ---- pre-registered criteria (screen_criteria.md, C1 and C2) -------------
 CRITERIA = {
  "control": {"MAPK1": 1, "MAPK3": 1, "AKT1": 1, "TP53": 0,
              "MCL1": 1, "BCL2L1": 1, "CASP3": 0, "CASP7": 0},
@@ -150,7 +150,7 @@ def write_report(rows, path, rules_path):
     P = [r for r in rows if r["pass"]]
     nodes = ["TP53", "CDKN1A", "BCL2L1", "MCL1", "BAX", "CYCS", "CASP3", "CASP7"]
     L = ["# Rule-variant screen — results\n",
-         "Criteria: `screen_criteria_v2.md` (fixed before running).",
+         "Criteria: `screen_criteria.md` (fixed before running).",
          "Method: exact value percolation, 32 variants x 4 conditions. No sampling.",
          f"Base rules: `{os.path.basename(rules_path)}`. Script: `run_screen.py`.\n",
          f"**{len(P)} of {len(rows)} variants satisfy all criteria.**\n",

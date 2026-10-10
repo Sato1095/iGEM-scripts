@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 """
-make_network_v2.py -- derive network_v2 from the OmniPath-built network by
+curate_network.py -- derive the curated model network from the OmniPath-built
+network by
 applying the documented literature corrections found during rule construction.
 
 STEP 2 OF 5 in the pathways pipeline.
 
 Input : final/edges.csv           (output of build_network.py, 31 nodes/117 edges)
-Output: network_v2_edges.csv      (29 nodes / 99 edges)
-        network_v2_nodes.csv
-        network_v2_changelog.csv  (every change, with its reason)
+Output: network_edges.csv      (29 nodes / 99 edges)
+        network_nodes.csv
+        network_changelog.csv  (every change, with its reason)
 
-  python3 make_network_v2.py --in final/edges.csv --out .
+  python3 curate_network.py --in final/edges.csv --out .
 
 Every correction below was argued from biology or from database artefact, NOT
 from the proteomics. This script is the record of that step; before it existed
@@ -48,7 +49,7 @@ drops of TP53->KRAS, AKT1->MDM4 and MDM2->MDM4 exist because those nodes
 are clamped inputs, so in-edges to them can never fire.
 
 Every change, including the node merge and removal below, is written to
-network_v2_changelog.csv with its original sign and its reason: 28 rows.
+network_changelog.csv with its original sign and its reason: 28 rows.
 """
 
 import argparse
@@ -107,7 +108,7 @@ MERGE_REASON = ("p85 and p110 are recorded with mutual activation, which locks "
 # single-resource in OmniPath and so was rejected in step 1, which left the
 # entire PI3K/AKT arm with no route from the perturbed node -- the model
 # could not have answered the question it was built for. It is tagged
-# provenance=MANUAL_ADD in network_v2_edges.csv; keep that tag visible.
+# provenance=MANUAL_ADD in network_edges.csv; keep that tag visible.
 MANUAL_ADD = [{
  "source": "KRAS", "target": "PI3K", "sign": "activates",
  "sign_basis": "manual_decision", "mechanism": "binding to p110alpha RBD",
@@ -190,7 +191,7 @@ def main():
     edges = sorted(kept.values(), key=lambda r: (r["source"], r["target"]))
     os.makedirs(args.out, exist_ok=True)
 
-    p = os.path.join(args.out, "network_v2_edges.csv")
+    p = os.path.join(args.out, "network_edges.csv")
     with open(p, "w", newline="", encoding="utf-8") as fh:
         w = csv.DictWriter(fh, fieldnames=cols, extrasaction="ignore")
         w.writeheader(); w.writerows(edges)
@@ -199,7 +200,7 @@ def main():
     for r in edges:
         (A if r["sign"] == "activates" else I)[r["target"]] += 1
     nodes = sorted({r["source"] for r in edges} | {r["target"] for r in edges})
-    with open(os.path.join(args.out, "network_v2_nodes.csv"), "w",
+    with open(os.path.join(args.out, "network_nodes.csv"), "w",
               newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
         w.writerow(["id", "role", "in_activators", "in_inhibitors", "out_degree"])
@@ -208,7 +209,7 @@ def main():
             w.writerow([n, role, A[n], I[n],
                         sum(1 for r in edges if r["source"] == n)])
 
-    with open(os.path.join(args.out, "network_v2_changelog.csv"), "w",
+    with open(os.path.join(args.out, "network_changelog.csv"), "w",
               newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
         w.writerow(["source", "target", "original_sign", "action", "reason"])
@@ -216,7 +217,7 @@ def main():
 
     print(f"  in : {len(rows)} edges")
     print(f"  out: {len(edges)} edges, {len(nodes)} nodes")
-    print(f"  changelog: {len(log)} entries -> network_v2_changelog.csv")
+    print(f"  changelog: {len(log)} entries -> network_changelog.csv")
 
 
 if __name__ == "__main__":

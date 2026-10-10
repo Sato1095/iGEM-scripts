@@ -1,6 +1,6 @@
 # Attractor analysis
 
-Rules: `rules_v3_unfitted.txt`  (29 nodes, state space 2^29 = 536,870,912)
+Rules: `rules_structural.txt`  (29 nodes, state space 2^29 = 536,870,912)
 
 
 ## Condition: control

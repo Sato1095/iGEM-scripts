@@ -4,7 +4,7 @@ build_network.py -- build a signed, directed, provenance-tracked network for a
 KRAS / MDM2 -> apoptosis Boolean model, entirely from OmniPath.
 
 STEP 1 OF 5 in the pathways pipeline. Produces final/edges.csv, which
-make_network_v2.py curates into the model network.
+curate_network.py curates into the model network.
 
 HOW WE RAN IT
 -------------

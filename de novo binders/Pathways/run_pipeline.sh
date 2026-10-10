@@ -8,7 +8,7 @@
 # Python 3.8+ and the standard library only -- no packages to install.
 #
 # Steps 1, 2, 4 and 5 regenerate their outputs from their inputs. Step 3 only
-# CHECKS the rules: rules_v3_unfitted.txt was hand-written from a draft and is
+# CHECKS the rules: rules_structural.txt was hand-written from a draft and is
 # an input here, not something this pipeline can produce. It is the one place
 # human judgement enters, and make_rules.py exists to hold that judgement to
 # the network.
@@ -19,8 +19,8 @@
 set -euo pipefail
 PY="${1:-python3}"
 
-for f in model_scope_v1.txt decisions_final.csv rules_v3_unfitted.txt \
-         build_network.py make_network_v2.py make_rules.py \
+for f in model_scope_v1.txt decisions_final.csv rules_structural.txt \
+         build_network.py curate_network.py make_rules.py \
          attractor_analysis.py run_screen.py; do
   [ -f "$f" ] || { echo "missing required input: $f" >&2; exit 1; }
 done
@@ -34,15 +34,15 @@ echo; echo "=== STEP 1: build network from OmniPath ==="
   --terminal-sinks --decisions decisions_final.csv --cache run01/raw -d final
 
 echo; echo "=== STEP 2: literature corrections ==="
-"$PY" make_network_v2.py --in final/edges.csv --out .
+"$PY" curate_network.py --in final/edges.csv --out .
 
 echo; echo "=== STEP 3: validate rules against network ==="
-"$PY" make_rules.py --edges network_v2_edges.csv --nodes network_v2_nodes.csv \
-  --check rules_v3_unfitted.txt --fixed KRAS MDM2 MDM4 \
-  --export-maboss model_v3.bnd --export-boolnet model_v3.bnet
+"$PY" make_rules.py --edges network_edges.csv --nodes network_nodes.csv \
+  --check rules_structural.txt --fixed KRAS MDM2 MDM4 \
+  --export-maboss model.bnd --export-boolnet model.bnet
 
 echo; echo "=== STEP 4: exact attractor analysis ==="
-"$PY" attractor_analysis.py --rules rules_v3_unfitted.txt \
+"$PY" attractor_analysis.py --rules rules_structural.txt \
   --clamp control:KRAS=1,MDM2=1,MDM4=1 \
   --clamp MDM2_degraded:KRAS=1,MDM2=0,MDM4=1 \
   --clamp KRAS_degraded:KRAS=0,MDM2=1,MDM4=1 \
@@ -50,11 +50,11 @@ echo; echo "=== STEP 4: exact attractor analysis ==="
   --samples 120 --steps 6000 --out attractor_report.md
 
 echo; echo "=== STEP 5: 32-variant screen ==="
-"$PY" run_screen.py --rules rules_v3_unfitted.txt \
+"$PY" run_screen.py --rules rules_structural.txt \
   --out-json screen_results.json --out-md screen_report.md
 
 echo; echo "=== STEP 6: checksums ==="
-sha256sum network_v2_edges.csv network_v2_nodes.csv network_v2_changelog.csv \
-  rules_v3_unfitted.txt attractor_report.md screen_report.md \
+sha256sum network_edges.csv network_nodes.csv network_changelog.csv \
+  rules_structural.txt attractor_report.md screen_report.md \
   screen_results.json decisions_final.csv model_scope_v1.txt | tee checksums.txt
 echo; echo "PIPELINE COMPLETE"

@@ -1,108 +1,214 @@
-# Justification of the rule set and initial conditions
+# How the Boolean rules were written
 
-Model: network_v2 (29 nodes, 99 edges), rules_v2.txt, A549.
+Model: the curated network — 29 nodes, 99 signed edges — in A549.
+Rule set: `rules_structural.txt`.
 
-## 1. The default convention
+This document covers everything up to the point where the rules meet the
+proteomics. It ends by listing the places they disagree. What happens to
+those disagreements is `screen_criteria.md` and the screen itself; **no
+result from the screen appears here**, because every judgement below was
+made before it.
 
-Every node takes the form `(any activator) AND NOT (any inhibitor)` unless
-stated otherwise. This encodes two claims: one activator is sufficient to turn
-the node on, and one inhibitor is sufficient to turn it off. Both were adopted
-as the null assumption, not because they are always true, but because they are
-the weakest assumption consistent with a signed edge list: an edge asserts that
-the source can change the target, and nothing more. Departures from the default
-are therefore the places where extra knowledge was added, and each is listed
-below.
+---
 
-Twelve of 29 rules are the unmodified default.
+## 1. What a signed edge list cannot tell you
 
-## 2. Tier 1 — mechanical (no intervention)
+An edge asserts that the source can change the target. It does not say how
+the inputs to a node combine. Group a node's regulators into activators and
+inhibitors and the rule is fully determined by exactly two questions:
 
-AKT1, APAF1, BAD, BAX, BCL2L11, CASP3, CASP7, CYCS, DIABLO, MAPK1, MAPK3,
-MCL1, MDM2, PTEN, XIAP.
+> **Is one activator enough to switch the node on?**
+> **Is one inhibitor enough to switch it off?**
 
-These follow directly from the network under the default convention. Note in
-particular:
+Answer yes to both and you get `(any activator) AND NOT (any inhibitor)`.
+That is the default convention, and it is the weakest assumption consistent
+with a signed edge list — it adds nothing the edges do not already claim.
 
-- `BAD = not (AKT1 or RAF1)` — two kinases, either sufficient. This is the case
-  worked out by hand as a truth table and it agrees with the mechanical result.
-- `BAX = (TP53 or BCL2L11 or GSK3B or BBC3) and not (BCL2L1 or MCL1 or AKT1)` —
-  the guards enter under OR inside the NOT, so BOTH must be absent for BAX to
-  activate. This is the stringent form, and it is what the default produces; no
-  intervention was needed.
-- `MCL1 = (MAPK1 or MAPK3) and not (BCL2L11 or GSK3B or PMAIP1 or TP53 or BBC3)` —
-  ERK stabilises, and any one BH3-only protein suffices to neutralise. MCL1 is
-  therefore lost under either single agent, which is why it cannot be the node
-  that discriminates them.
+So the default is the starting point everywhere, and the only thing worth
+documenting is where we answered *no*, and why. That is what the tiers
+below are.
 
-## 3. Tier 2 — structural and semantic overrides
+## 2. The draft, and where it flagged itself
 
-These would be made regardless of the validation data. Each corrects a mismatch
-between what an edge list can express and what the node is defined to mean.
+`make_rules.py` writes the draft under that convention:
 
-| rule | override | justification |
+```
+python3 make_rules.py --edges network_edges.csv --nodes network_nodes.csv \
+    --fixed KRAS MDM2 MDM4 --out rules_draft.txt
+```
+
+It marks the nodes where the default is most likely to be wrong — where
+several inputs have to be combined, or where an activator's mechanism names
+a physical complex. Eight came back flagged: **BAX, BCL2L1, BCL2L11, CASP9,
+CDKN1A, MCL1, PI3K, TP53**.
+
+The flags are a prompt to check, not a verdict. Checking them changed four
+(BCL2L1, CASP9, PI3K, TP53) and left four alone (BAX, BCL2L11, CDKN1A,
+MCL1). Seven further nodes were changed that the draft had not flagged —
+those came from reading the edges themselves rather than from the input
+count.
+
+Of the 29 rules: **3 are clamped inputs, 15 are the unmodified default, and
+11 depart from it.**
+
+## 3. Tier 1 — the default, unchanged
+
+Fifteen rules. Both questions answered yes; nothing added.
+
+> AKT1, APAF1, BAD, BAX, BCL2L11, CASP3, CASP7, CDKN1A, CYCS, DIABLO,
+> MAPK1, MAPK3, MCL1, PTEN, XIAP
+
+Three are worth pointing at, because they look like decisions and are not:
+
+- `BAD = not (AKT1 or RAF1)` — two kinases, either sufficient. Worked out
+  by hand as a truth table first; the default produces the same thing.
+- `BAX = (TP53 or BCL2L11 or GSK3B or BBC3) and not (BCL2L1 or MCL1 or AKT1)`
+  — the guards enter under OR inside the NOT, so **both** must be absent for
+  BAX to fire. That is the stringent reading, and it is what the default
+  gives. No intervention was needed to get it.
+- `MCL1 = (MAPK1 or MAPK3) and not (BCL2L11 or GSK3B or PMAIP1 or TP53 or BBC3)`
+  — ERK stabilises; any one BH3-only protein neutralises. MCL1 is therefore
+  lost under either single agent, which is why it cannot be the node that
+  distinguishes them.
+
+`CDKN1A` is also here: `(TP53 or FOXO3) and not (GSK3B or MDM2 or MAPK1)` is
+exactly the default. It was flagged by the draft, checked, and kept.
+
+## 4. Tier 2 — structural and semantic overrides
+
+Eleven rules where one of the two questions is answered *no*, for reasons
+that come from what the node means or how the complex works. Every one of
+these would be made whatever the proteomics said.
+
+| rule | what changed | why |
 |---|---|---|
-| `CASP9 = CYCS and APAF1 and not (...)` | AND between activators | The apoptosome is a stoichiometric complex. Under OR, cytochrome c activates caspase-9 with no Apaf-1 present, which makes the execution module decorative. This is a composition constraint, not a fitted choice. |
-| `FOXO3 = not (AKT1 or MAPK1)` | activator requirement removed | FOXO3 is constitutively expressed; regulation is nuclear exclusion by AKT. Its only activator edge is a weak p53 transcriptional record (effort 19), which under the default would make FOXO3 p53-dependent and prevent KRAS loss from inducing BIM. |
-| `GSK3B = not (AKT1 or MAPK1 or MAPK3)` | as above | Constitutively active kinase held off by AKT (effort 128). Only activator edge is TP53 at effort 6. |
-| `BAK1 = not (BCL2L1 or MCL1)` | as above | BAK is constitutively resident at the outer membrane; control is guard sequestration. |
-| `PMAIP1 = TP53`, `BBC3 = TP53` | reciprocal records removed | `BCL2L1 -\| PMAIP1` and `MCL1 -\| BBC3` are reverse records of sequestration, already handled as antagonist→guard elsewhere. Retaining both directions creates mutual-inhibition toggles. |
-| `RAF1 = KRAS`, `MAP2K1 = RAF1` | ERK feedback and AKT⊣RAF1 removed | These are modulatory phosphorylations that tune amplitude and adaptation. Read as Boolean switches they (a) shut the MAPK arm off at baseline, since AKT is constitutively active in A549, and (b) create a sustained oscillator. Neither matches a cell with constitutive ERK activity. |
-| `PI3K = KRAS and not (TP53 or PTEN)` | FOXO3→PI3K removed | Creates an AKT/FOXO3 negative-feedback oscillator that made the KRAS-degraded condition non-deterministic. |
-| `TP53 = not (MDM2 and MDM4)` | AND between suppressors | Under OR with MDM4 clamped ON, p53 can never activate and MDM2 degradation is inert — a degenerate model. Also contradicted by the Nutlin data (p53 rises 4.8x with MDM4 present). |
+| `CASP9 = CYCS and APAF1 and not (…)` | AND between activators | The apoptosome is a stoichiometric complex. Under OR, cytochrome c activates caspase-9 with no Apaf-1 present and the execution module becomes decorative. A composition constraint, not a preference. |
+| `FOXO3 = not (AKT1 or MAPK1)` | activator requirement dropped | FOXO3 is constitutively expressed; regulation is nuclear exclusion by AKT. Its only activator edge is a weak p53 transcriptional record (effort 19), which under the default would make FOXO3 p53-dependent. |
+| `GSK3B = not (AKT1 or MAPK1 or MAPK3)` | activator requirement dropped | Constitutively active kinase held off by AKT (effort 128). Its only activator edge is TP53 at effort 6. |
+| `BAK1 = not (BCL2L1 or MCL1)` | activator requirement dropped | BAK is constitutively resident at the outer membrane; control is guard sequestration, not synthesis. |
+| `PMAIP1 = TP53` | inhibitor dropped | `BCL2L1 ⊣ PMAIP1` is the reverse record of a sequestration event already represented as antagonist→guard. Keeping both directions creates a mutual-inhibition toggle. |
+| `BBC3 = TP53 or FOXO3` | inhibitor dropped | `MCL1 ⊣ BBC3` is the same reciprocal-record problem as PMAIP1 above. **Both activators are kept.** |
+| `RAF1 = KRAS`, `MAP2K1 = RAF1` | ERK feedback and AKT ⊣ RAF1 dropped | Modulatory phosphorylations that tune amplitude and adaptation. Read as Boolean switches they shut the MAPK arm off at baseline, since AKT is constitutively active in A549, and create a sustained oscillator. Neither matches a cell with constitutive ERK activity. |
+| `PI3K = KRAS and not (TP53 or PTEN)` | FOXO3 → PI3K dropped | Creates an AKT/FOXO3 negative-feedback oscillator that made the KRAS-degraded condition non-deterministic. |
+| `TP53 = not (MDM2 and MDM4)` | activators dropped; AND between suppressors | ERK-dependent p53 would confound the KRAS comparison. Under OR with MDM4 clamped ON, p53 could never activate and MDM2 degradation would be inert — a degenerate model. |
 
-**Network change made for the same reason:** `KRAS → PI3K` was restored as a
-documented manual addition. It is single-resource in OmniPath and was excluded
-by the evidence threshold, leaving the entire PI3K/AKT arm disconnected from
-the perturbed node. Without it, KRAS degradation cannot reach AKT, BAD, FOXO3
-or GSK3B, and the model cannot address the question it was built for.
+**A correction worth recording.** An earlier version of this document wrote
+the BBC3 rule as `BBC3 = TP53`, grouped with PMAIP1 under "reciprocal
+records removed". That was wrong, and in a way that mattered. The default
+for BBC3 is `(TP53 or FOXO3) and not MCL1`; removing the reciprocal `MCL1`
+record gets you to `TP53 or FOXO3` and no further. Dropping `FOXO3 → BBC3`
+is a second, independent change that the reciprocal-record argument does not
+license — and it is one of the alternatives the screen exists to test. The
+rule set has always carried both activators; it was the description that was
+wrong.
 
-## 4. Tier 3 — rules fitted to the validation data
+### One network change made on the same grounds
 
-**These three were chosen because they reproduce the experimental anchors. They
-are not independent predictions and must not be presented as such.**
+`KRAS → PI3K` was restored as a documented manual addition. It is
+single-resource in OmniPath and was excluded by the evidence threshold,
+which left the entire PI3K/AKT arm disconnected from the perturbed node.
+Without it, KRAS degradation cannot reach AKT, BAD, FOXO3 or GSK3B and the
+model cannot address the question it was built for. It is flagged
+`provenance=MANUAL_ADD` in the edge list.
 
-| rule | fitted choice | what it was fitted to |
-|---|---|---|
-| `BCL2L1 = not (BAD and (BBC3 or PMAIP1))` | AND between a sensitiser and an activator | Under the default (OR), either arm alone clears BCL-XL and both single agents kill — contradicting both datasets. The AND makes BCL-XL a coincidence detector requiring input from both arms. Biologically defensible (BAD is a sensitiser that displaces but does not activate; PUMA/NOXA are activators), but the AND was selected to fit. |
-| `BBC3 = TP53` (FOXO3→BBC3 unused) | PUMA made p53-dependent | With FOXO3 able to induce PUMA, KRAS degradation alone clears BCL-XL and kills. The proteomics supports p53-dependence (PUMA rises under Nutlin, unchanged under RAS degradation), but this is the data being used twice. |
-| `CDKN1A = (TP53 or FOXO3) and not MDM2` | trivial inhibitors dropped | MAPK1⊣CDKN1A (effort 5) and GSK3B⊣CDKN1A (effort 15) vetoed TP53→CDKN1A (effort 3452) under the default, so p21 could not rise while ERK was active. The evidence asymmetry justifies it independently, but the fit motivated the inspection. |
+## 5. Checking the rules against the proteomics
 
-**Degrees of freedom.** Three rules were tuned against two experimental
-observations. The model therefore *accommodates* the anchors rather than
-predicting them. The synergy result is a hypothesis generated under those
-assumptions, and the honest claim is: given a coincidence-detector BCL-XL and
-p53-dependent PUMA, combined MDM2 and KRAS degradation is predicted to reach
-apoptosis while neither single agent does.
+Up to here nothing has looked at data. The rules now get compared with the
+Nutlin arm of `validation_both_arms_A549.csv`, node by node: the model
+"changes" a node if its state differs between the control and MDM2-degraded
+attractors, and that direction is compared with the measured call.
 
-## 5. Initial conditions
+Fourteen nodes agree. Four were not detected (PMAIP1, BCL2L11, MCL1, MDM4).
+**Ten disagree:**
 
-**The outcome does not depend on them.** Each of the four conditions was run
-from 120 random initial states across all 29 nodes. Every condition converged
-to a single attractor in 120/120 runs. The perturbation, not the starting
-point, determines the result, and no cyclic attractors were found.
+| node | model | observed | |
+|---|---|---|---|
+| `BCL2L1` | down | **up** +0.78 | the guard survives MDM2 inhibition; the model clears it |
+| `CDKN1A` | unchanged | **up** +2.13 | p21 cannot rise while ERK is active |
+| `GSK3B` | unchanged | **up** +0.36 | held off by MAPK1, which C1 and C2 both require to be on |
+| `CASP9` | unchanged | **down** −0.42 | already off in the model; a fall from off is not representable |
+| `CYCS` | up | unchanged | |
+| `DIABLO` | up | unchanged | |
+| `PTEN` | up | unchanged | |
+| `AKT1` | down | unchanged | |
+| `XIAP` | down | unchanged | |
+| `MDM2` | down | **up** +2.84 | nutlin blocks MDM2–p53 binding; the model clamps MDM2 to 0, so the rise cannot be represented at all |
 
-Initial states in the .cfg files are nevertheless set to the model's own
-control attractor rather than to zeros, because that mirrors the experiment:
-cells are growing in an untreated steady state when the drug is added.
+### What was done with each
 
-Control attractor (ON): KRAS, PI3K, AKT1, RAF1, MAP2K1, MAPK1, MAPK3, MCL1,
+**Two became screened rules.** `BCL2L1` and `CDKN1A` are both places where a
+defensible alternative answer to one of the two questions would remove the
+disagreement, so both alternatives go into the screen rather than being
+chosen here — R1 and R3.
+
+**Two more rules go in alongside them.** `TP53` (R5) had previously been set
+to the AND form by hand with the Nutlin data in view; it is returned to the
+screen as a free variant so the choice is made by the stated procedure
+instead. The guard logic at BAX and BAK1 (R4) goes in because it is coupled
+to R1: if the alternative BCL2L1 rule keeps BCL-XL present, whether the
+guards still block the effectors is no longer something the default can be
+assumed to settle. `BBC3` (R2) goes in as the remaining open question from
+tier 2 — whether PUMA is p53-only or also FOXO3-driven decides whether the
+KRAS arm can reach the mitochondrion at all.
+
+**The rest are not screened, and are open.** Five of them —
+`CYCS`, `DIABLO`, `PTEN`, `AKT1` and `XIAP` — are cases where the model moves
+a node and the measurement does not. `GSK3B` is the reverse. These are not
+measurement failures and the screen does not address them; they are recorded
+here as standing disagreements. Two have a structural cause worth stating:
+
+- `GSK3B = not (AKT1 or MAPK1 or MAPK3)` cannot be on while MAPK1 is on, and
+  a viable control cell requires MAPK1 on. The observed rise is
+  unreachable for any rule set built on this network.
+- The same holds for `APAF1 = (TP53 or CYCS) and not BCL2L1` once BCL-XL is
+  required to survive: APAF1 is forced off. APAF1 is measured up (+0.82).
+  It does not appear in the mismatch table above only because the structural
+  rules clear BCL-XL, which the data says they should not.
+
+`MDM2` is a category of its own: nutlin and degradation are different
+perturbations, and a clamped node cannot show the rise that p53-driven
+transcription produces. No rule set can fix this.
+
+**Abundance is not activity.** Several of these disagreements sit on that
+line. `BAX` and `BAK1` are measured up while `CYCS` is unchanged — more
+effector protein, no reported cytochrome c release. A Boolean node that
+means "active" cannot be scored against a measurement that means "present",
+and where the two readings conflict the model is being asked a question the
+data cannot answer.
+
+## 6. Initial conditions
+
+**The outcome does not depend on them.** Each condition was run from 120
+random initial states across all 29 nodes and converged to a single
+attractor in 120/120. The perturbation, not the starting point, determines
+the result, and no cyclic attractors were found.
+
+Control attractor, ON: KRAS, PI3K, AKT1, RAF1, MAP2K1, MAPK1, MAPK3, MCL1,
 BCL2L1, XIAP, MDM2, MDM4. Everything else OFF.
 
-This is itself a check on the rules: it is a proliferating A549 cell with
-constitutive KRAS/ERK signalling, active AKT, both mitochondrial guards intact,
-XIAP restraining the caspases, p53 held off by MDM2, and no caspase activity.
-It was not imposed — it emerges from the rules, and a rule set that failed to
+This is itself a check on the rules. It is a proliferating A549 cell with
+constitutive KRAS/ERK signalling, active AKT, both mitochondrial guards
+intact, XIAP restraining the caspases, p53 held off by MDM2, and no caspase
+activity. It was not imposed — it emerges, and a rule set that failed to
 produce it would be wrong before any perturbation was tested.
 
-**Fixed nodes.** KRAS and MDM2 are clamped (1 = present, 0 = degraded) because
-they are the perturbations. MDM4 is clamped ON because A549 expresses it and
-MDM2-directed degraders do not target it; its in-edges were removed for this
-reason.
+**Fixed nodes.** KRAS and MDM2 are clamped (1 = present, 0 = degraded)
+because they are the perturbations. MDM4 is clamped ON because A549
+expresses it and MDM2-directed degraders do not target it; its in-edges were
+removed for the same reason.
 
-## 6. What a reader should take from this
+## 7. What a reader should take from this
 
 The control attractor and the single-attractor result are properties of the
-network and convention. The Tier 2 overrides are mechanism, defensible on their
-own terms. The Tier 3 rules are fitted, and the synergy prediction rests on
-them. The discriminating experiment is therefore the combination arm, which no
-dataset used here can speak to.
+network and the convention, not of any choice made to fit data. The tier 2
+overrides are mechanism, defensible on their own terms, and were settled
+before the proteomics was opened.
+
+What the proteomics then did was identify ten disagreements. Two of them,
+plus three related rules, were turned into the alternatives the screen
+tests. The rest remain open and are listed above rather than resolved.
+
+That the rules themselves were not fitted does not make the screen blind:
+the five rules it varies were chosen with the disagreements in view. The
+screen is a consistency check against data already seen, and
+`screen_criteria.md` states the same thing before any variant is run.

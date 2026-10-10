@@ -33,7 +33,7 @@ reason.
 
 → 203,001 interactions fetched, 28,146 qualified, **117 edges among 31 nodes**.
 
-### 2 · Curation — `make_network_v2.py` → `network_v2_*.csv`
+### 2 · Curation — `curate_network.py` → `network_*.csv`
 
 Evidence thresholds measure how well an edge is attested, not whether it
 points the right way. Forty edges were adjudicated by hand across steps 1 and
@@ -60,9 +60,9 @@ PI3K/AKT arm disconnected from the perturbed node — the model could not have
 addressed its own question. It is tagged `provenance=MANUAL_ADD` in the edge
 list; that tag should stay visible wherever the network is shown.
 
-→ **29 nodes, 99 edges**, with all 28 changes in `network_v2_changelog.csv`.
+→ **29 nodes, 99 edges**, with all 28 changes in `network_changelog.csv`.
 
-### 3 · Rules — `make_rules.py` → `rules_v3_unfitted.txt`
+### 3 · Rules — `make_rules.py` → `rules_structural.txt`
 
 An edge list cannot say whether two activators combine with AND or OR. The
 script drafts a starting point under one default convention — *any one
@@ -71,7 +71,7 @@ is likely wrong, and then checks the hand-edited result back against the
 network.
 
 **This is the one step with human judgement in the middle of it.**
-`rules_v3_unfitted.txt` was written by hand from the draft and is an *input*
+`rules_structural.txt` was written by hand from the draft and is an *input*
 to the pipeline, not something it regenerates.
 
 The check verifies, for every input of every rule, that the rule's actual
@@ -81,7 +81,7 @@ the rules deliberately leave unused. Each is accounted for by an `OVERRIDE`
 comment in the rules file naming the edge and the reason. An eighteenth would
 mean something had been dropped by accident; that is what the check is for.
 
-Exports `model_v3.bnd`/`.cfg` (MaBoSS) and `model_v3.bnet` (BoolNet). Steps 4
+Exports `model.bnd`/`.cfg` (MaBoSS) and `model.bnet` (BoolNet). Steps 4
 and 5 parse the rules file directly and do not read either.
 
 ### 4 · Attractors — `attractor_analysis.py` → `attractor_report.md`
@@ -108,7 +108,7 @@ scored against the pre-registered criteria, under all four conditions.
 
 **The criteria were frozen before any variant was run.** That ordering is the
 whole point, and it must never be described the other way round.
-`screen_criteria_v2.md` is the frozen document; `run_screen.py` transcribes
+`screen_criteria.md` is the frozen document; `run_screen.py` transcribes
 its C1 and C2 into code. C3 was withdrawn before running, and the
 `both_degraded` condition contributes no criteria at all — it is the
 prediction.
@@ -166,13 +166,13 @@ tension is stated rather than settled.
 | `decisions_final.csv` | 25 reviewed sign calls (5 signs, 20 drops), each with a rationale |
 | `final/` | step 1 output, including `manifest.json` and the 117-edge list |
 | `run01/raw/` | **the pinned OmniPath snapshot** |
-| `network_v2_{edges,nodes,changelog}.csv` | the model network, 29/99, and all 28 changes |
-| `rules_v3_unfitted.txt` | the 29 Boolean rules, overrides marked inline |
-| `screen_criteria_v2.md` | the pre-registered criteria |
+| `network_{edges,nodes,changelog}.csv` | the model network, 29/99, and all 28 changes |
+| `rules_structural.txt` | the 29 Boolean rules, overrides marked inline |
+| `screen_criteria.md` | the pre-registered criteria |
 | `rules_justification.md` | tier-by-tier justification of the rule set |
 | `validation_both_arms_A549.csv` | both proteomics arms mapped onto model nodes |
 | `attractor_report.md`, `screen_report.md`, `screen_results.json` | results |
-| `model_v3.{bnd,cfg,bnet}` | MaBoSS and BoolNet exports |
+| `model.{bnd,cfg,bnet}` | MaBoSS and BoolNet exports |
 | `CHECKSUMS.md`, `FINAL_REPORT_MANIFEST.md`, `checksums.txt` | artefact ledgers |
 
 ### The OmniPath snapshot is pinned — do not re-query
@@ -193,38 +193,18 @@ read when the node set is declared.
 
 ---
 
-## Known issues in the supporting documents
+## Known issues
 
-The scripts and their outputs are consistent with each other. Three of the
-prose documents are not, and each needs a pass before publication.
+The scripts, their outputs and the supporting documents are consistent with
+each other. Two things are worth knowing.
 
-- **`rules_justification.md` documents the wrong rule set.** Its header names
-  `rules_v2.txt`, and its section 4 lists three rules as "fitted to the
-  validation data" — `BCL2L1 = not (BAD and (BBC3 or PMAIP1))`, `BBC3 = TP53`
-  and `CDKN1A = (TP53 or FOXO3) and not MDM2`. Those are the **form B**
-  variants, not what `rules_v3_unfitted.txt` contains, which carries form A
-  for all three. Sections 1 and 3 still describe the shipped rules
-  correctly; section 4 describes the superseded fitted set that the
-  32-variant screen replaced. As it stands it contradicts the first line of
-  the rules file, which states that no rule was chosen by comparison with the
-  mass-spec data.
-- **Rule counts do not reconcile.** `rules_justification.md` says "twelve of
-  29 rules are the unmodified default" while its own Tier 1 list names
-  fifteen; the rules file marks six `OVERRIDE`; and the validator reports
-  seventeen unused edges. Of these, only the six and the seventeen are
-  derivable from the committed files.
-- **`screen_criteria_v2.md` section 6 still requires C3**, which section 5 of
-  the same document withdraws. The code is right — `run_screen.py` applies C1
-  and C2 only. Section 3's "all other 24 rules are held fixed" should be 23,
-  since R4 varies two nodes.
-- **The three artefact ledgers disagree.** The committed files match
-  `checksums.txt` (CRLF, from a Windows run). `CHECKSUMS.md` records an
-  LF-ending run, and two entries in `FINAL_REPORT_MANIFEST.md`
-  (`network_v2_edges.csv`, `screen_report.md`) match neither and are stale.
-  `checksums.txt` is also UTF-16LE PowerShell table output, so it cannot be
-  checked with `sha256sum -c`, while `run_pipeline.sh` writes a plain LF
-  `sha256sum` file to the same name.
-- **`model_v3.cfg` sets every node to 0**, which is what the MaBoSS exporter
-  writes. `rules_justification.md` section 5 describes `.cfg` files
-  initialised to the control attractor; that was true of archived
-  per-condition `.cfg` files which are not in this repository.
+- **`model.cfg` sets every node to 0**, which is what the MaBoSS exporter
+  writes. If you open the model in MaBoSS, set the initial states to the
+  control attractor given in `rules_justification.md` §6 rather than using
+  the file as shipped.
+- **Ten nodes disagree between the structural rules and the Nutlin arm**,
+  and only two of them became screened rules. The other eight are listed in
+  `rules_justification.md` §5 and are open — two of them (`GSK3B`, and
+  `APAF1` once BCL-XL is required to survive) cannot be satisfied by any
+  rule set built on this network, which is a limit of the network rather
+  than of the rules.

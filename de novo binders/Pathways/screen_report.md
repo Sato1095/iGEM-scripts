@@ -1,8 +1,8 @@
 # Rule-variant screen — results
 
-Criteria: `screen_criteria_v2.md` (fixed before running).
+Criteria: `screen_criteria.md` (fixed before running).
 Method: exact value percolation, 32 variants x 4 conditions. No sampling.
-Base rules: `rules_v3_unfitted.txt`. Script: `run_screen.py`.
+Base rules: `rules_structural.txt`. Script: `run_screen.py`.
 
 **4 of 32 variants satisfy all criteria.**
 

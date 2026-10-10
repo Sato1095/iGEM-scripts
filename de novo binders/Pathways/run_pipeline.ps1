@@ -14,8 +14,8 @@
 # Inputs that must already be present in this folder:
 #   model_scope_v1.txt        declared node scope
 #   decisions_final.csv       25 curation decisions
-#   rules_v3_unfitted.txt     Boolean rules
-#   screen_criteria_v2.md     pre-registered criteria (read by you, not by code)
+#   rules_structural.txt     Boolean rules
+#   screen_criteria.md     pre-registered criteria (read by you, not by code)
 #   run01\raw\                archived OmniPath snapshot  <-- do not delete
 #
 # Everything else in this folder is regenerated.
@@ -40,8 +40,8 @@ function Need($path) {
 # ---- preflight -------------------------------------------------------------
 Step 0 "preflight"
 foreach ($f in @("model_scope_v1.txt", "decisions_final.csv",
-                 "rules_v3_unfitted.txt", "build_network.py",
-                 "make_network_v2.py", "make_rules.py",
+                 "rules_structural.txt", "build_network.py",
+                 "curate_network.py", "make_rules.py",
                  "attractor_analysis.py", "run_screen.py")) { Need $f }
 
 if (-not (Test-Path "run01\raw")) {
@@ -66,17 +66,17 @@ $cache = if ($Refetch) { "final\raw" } else { "run01\raw" }
 if ($LASTEXITCODE -ne 0) { throw "step 1 failed" }
 
 # ---- 2. literature corrections --------------------------------------------
-Step 2 "apply literature corrections  ->  network_v2_*.csv"
-& $Python make_network_v2.py --in final\edges.csv --out .
+Step 2 "apply literature corrections  ->  network_*.csv"
+& $Python curate_network.py --in final\edges.csv --out .
 if ($LASTEXITCODE -ne 0) { throw "step 2 failed" }
 
 # ---- 3. validate the rules against the network ----------------------------
 Step 3 "validate rules against network"
 & $Python make_rules.py `
-    --edges network_v2_edges.csv --nodes network_v2_nodes.csv `
-    --check rules_v3_unfitted.txt `
+    --edges network_edges.csv --nodes network_nodes.csv `
+    --check rules_structural.txt `
     --fixed KRAS MDM2 MDM4 `
-    --export-maboss model_v3.bnd --export-boolnet model_v3.bnet
+    --export-maboss model.bnd --export-boolnet model.bnet
 if ($LASTEXITCODE -ne 0) {
     throw "step 3 failed -- rules disagree with the network; see output above"
 }
@@ -84,7 +84,7 @@ if ($LASTEXITCODE -ne 0) {
 # ---- 4. exact attractor analysis ------------------------------------------
 Step 4 "exact attractor analysis  ->  attractor_report.md"
 & $Python attractor_analysis.py `
-    --rules rules_v3_unfitted.txt `
+    --rules rules_structural.txt `
     --clamp control:KRAS=1,MDM2=1,MDM4=1 `
     --clamp MDM2_degraded:KRAS=1,MDM2=0,MDM4=1 `
     --clamp KRAS_degraded:KRAS=0,MDM2=1,MDM4=1 `
@@ -96,15 +96,15 @@ if ($LASTEXITCODE -ne 0) { throw "step 4 failed" }
 # ---- 5. rule-variant screen -----------------------------------------------
 Step 5 "32-variant screen  ->  screen_report.md"
 & $Python run_screen.py `
-    --rules rules_v3_unfitted.txt `
+    --rules rules_structural.txt `
     --out-json screen_results.json `
     --out-md screen_report.md
 if ($LASTEXITCODE -ne 0) { throw "step 5 failed" }
 
 # ---- checksums -------------------------------------------------------------
 Step 6 "checksums of the report artifacts"
-$artifacts = @("network_v2_edges.csv", "network_v2_nodes.csv",
-               "network_v2_changelog.csv", "rules_v3_unfitted.txt",
+$artifacts = @("network_edges.csv", "network_nodes.csv",
+               "network_changelog.csv", "rules_structural.txt",
                "attractor_report.md", "screen_report.md",
                "screen_results.json", "decisions_final.csv",
                "model_scope_v1.txt")
@@ -126,7 +126,7 @@ Write-Host ""
 Write-Host "PIPELINE COMPLETE in $([int]$sw.Elapsed.TotalSeconds)s" -ForegroundColor Green
 Write-Host ""
 Write-Host "Read in this order:"
-Write-Host "  network_v2_changelog.csv   what changed from the OmniPath network and why"
+Write-Host "  network_changelog.csv   what changed from the OmniPath network and why"
 Write-Host "  attractor_report.md        the four attractors, exact"
 Write-Host "  screen_report.md           32-variant grid and predictions"
 Write-Host ""

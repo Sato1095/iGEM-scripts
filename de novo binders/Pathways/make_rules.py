@@ -13,34 +13,34 @@ rules back against the network.
 
 WHAT WE RAN
 -----------
-Drafted once, hand-edited the draft into rules_v3_unfitted.txt, then used
+Drafted once, hand-edited the draft into rules_structural.txt, then used
 check mode from then on:
 
-    python3 make_rules.py --edges network_v2_edges.csv \
-        --nodes network_v2_nodes.csv --check rules_v3_unfitted.txt \
+    python3 make_rules.py --edges network_edges.csv \
+        --nodes network_nodes.csv --check rules_structural.txt \
         --fixed KRAS MDM2 MDM4 \
-        --export-maboss model_v3.bnd --export-boolnet model_v3.bnet
+        --export-maboss model.bnd --export-boolnet model.bnet
 
 29 rules, 0 problems, 17 warnings. The 17 are all of one kind: an edge in
 the network that no rule uses. That number matters, because the check is
 what keeps a deliberate omission distinguishable from an accident -- each
 of those 17 is accounted for by an OVERRIDE comment in
-rules_v3_unfitted.txt naming the edge and why it is unused. An eighteenth
+rules_structural.txt naming the edge and why it is unused. An eighteenth
 would mean something was dropped by mistake.
 
-Exports model_v3.bnd + model_v3.cfg (MaBoSS) and model_v3.bnet (BoolNet).
+Exports model.bnd + model.cfg (MaBoSS) and model.bnet (BoolNet).
 Neither is read by steps 4 and 5, which parse the rules file directly;
 they are there for anyone wanting to open the model in those tools.
 
-  1. draft     python3 make_rules.py --edges network_v2_edges.csv \\
-                   --nodes network_v2_nodes.csv \\
+  1. draft     python3 make_rules.py --edges network_edges.csv \\
+                   --nodes network_nodes.csv \\
                    --fixed KRAS MDM2 MDM4 --out rules_draft.txt
-  2. edit      fix the TODO nodes by hand -> rules_v3_unfitted.txt
-  3. check     python3 make_rules.py --check rules_v3_unfitted.txt \\
-                   --edges network_v2_edges.csv --nodes network_v2_nodes.csv \\
+  2. edit      fix the TODO nodes by hand -> rules_structural.txt
+  3. check     python3 make_rules.py --check rules_structural.txt \\
+                   --edges network_edges.csv --nodes network_nodes.csv \\
                    --fixed KRAS MDM2 MDM4
-  4. export    ... --check rules_v3_unfitted.txt --export-maboss model_v3.bnd
-               ... --check rules_v3_unfitted.txt --export-boolnet model_v3.bnet
+  4. export    ... --check rules_structural.txt --export-maboss model.bnd
+               ... --check rules_structural.txt --export-boolnet model.bnet
 
 Nothing here is hard-coded to a particular network: --edges and --nodes are
 required arguments. The example paths are just the current artifacts.
