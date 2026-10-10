@@ -82,6 +82,10 @@ not show that Z2 was ever the leading candidate.
 The two stage 3 CSVs are `rank_binders.py`'s own `structural_ranking_full.csv`
 and `selected_binders.csv`, committed under the names we archived them as.
 
+Stage 3 also needs the 2,000 AlphaFold Multimer PDBs, published alongside
+this directory and passed with `--pdbdir`. They are not in here because of
+their number, not because they are unavailable.
+
 Figures are not kept here. They go through the iGEM uploads tool to
 `static.igem.wiki`.
 
@@ -100,11 +104,16 @@ pandas 3.0.5, numpy 2.5.3, matplotlib 3.11.2, biopython 1.88.
 - `analyze_designs.py` runs; its outputs are not committed, so there was
   nothing to compare against.
 
-**Not verified:** `rank_binders.py` could not be re-run. The 2,000 input PDBs
-are too large to commit, and `freesasa` would not build in the container used
-for the pass. The two stage 3 CSVs are therefore taken as given, not
-reconfirmed. Every number quoted above was read back out of the committed
+**Not verified:** `rank_binders.py` was not re-run. The design PDB set was not
+yet in place when the pass ran, and `freesasa` would not build in that
+container. The two stage 3 CSVs are therefore taken as given, not
+reconfirmed — every number quoted above was read back out of the committed
 table rather than recomputed from structures.
+
+With the PDBs published alongside and `freesasa` installed, this one is
+re-runnable, and it is the only part of the funnel still owing that check.
+Reproducing the committed tables needs `--site-tol 14`, not the stale 8.0
+default.
 
 ---
 

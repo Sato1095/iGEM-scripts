@@ -23,11 +23,14 @@ stages rather than two.
 INPUT
 -----
     --pdbdir     the 2,000 AlphaFold Multimer PDBs, chain A = MDM2 receptor,
-                 chain B = peptide. NOT COMMITTED — too large for this
-                 repository. Filenames must match design<NN>_n<M>.pdb for
-                 the design/n identifiers to be recovered.
+                 chain B = peptide, published alongside this directory.
+                 Filenames must match design<NN>_n<M>.pdb for the design/n
+                 identifiers to be recovered.
     --pockets    pockets_chimerax.json (default), beside this script
     --benchmark  bench_PMI_norm.pdb, beside this script
+
+    Reproducing the committed tables also needs --site-tol 14; see the
+    warning on that argument below.
 
 PRODUCED
 --------
@@ -49,12 +52,16 @@ PRODUCED
     net charge -1, interface pLDDT 89.46, apolar BSA 42.02 Å2/residue.
     Z2 (267.3) appears in the full table with passed_gates = False.
 
-NOT RE-RUNNABLE AS COMMITTED
-----------------------------
-The 2,000 input PDBs are not in this repository, so the committed tables
-could not be regenerated during the 2026 documentation pass and were NOT
-verified by re-running. They are taken as given. The figures downstream of
-them were re-generated and do reproduce.
+NOT RE-VERIFIED
+---------------
+The committed tables were NOT regenerated during the October 2026
+documentation pass: the design PDB set was not yet in place, and freesasa
+could not be built in the container the pass ran in. They are taken as
+given, and every number quoted above was read back out of the committed
+table rather than recomputed from structures.
+
+With the PDB set published alongside, and freesasa installed, this is
+re-runnable — it is the only script in the funnel still owing that check.
 
 Ranking is an INTERSECTION of independent axes, not a weighted sum, so no
 axis's blindness can dominate and the selection is a defensible logical
