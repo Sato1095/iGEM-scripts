@@ -1,4 +1,4 @@
-# Boolean rules v3 -- network_v2 (29 nodes, 99 edges)
+# Boolean rules for the curated network (29 nodes, 99 edges)
 # NO rule here was chosen by comparison with the mass-spec data.
 # Defaults + structural overrides only (apoptosome stoichiometry,
 # constitutive proteins, reciprocal records, modulatory phosphorylations).

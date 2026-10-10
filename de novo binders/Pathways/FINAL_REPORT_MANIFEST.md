@@ -11,7 +11,7 @@ All checksums are SHA-256 of the files as generated.
 |---|---|---|
 | `network_edges.csv` | **Table 1.** The model network: 29 nodes, 99 signed directed edges, each with sign, sign basis, mechanism, resources, PMIDs, curation effort and provenance. | 1e3c8bd2bc52 |
 | `network_nodes.csv` | **Table 2.** Node list with role (input / intermediate / readout) and in/out degree. | 341c3d5f9e92 |
-| `rules_structural.txt` | **Table 3.** Boolean rules. Every departure from the default convention is marked OVERRIDE with its reason inline. | 2d96124f1e8d |
+| `rules_structural.txt` | **Table 3.** Boolean rules. Every departure from the default convention is marked OVERRIDE with its reason inline. | beb357dc68e5 |
 | `attractor_report.md` | **Table 4 / Figure 1.** Exact attractor per condition by value percolation. All 29 nodes determined in all four conditions; unique attractor provably reachable from all 2^26 states. | 2f8951d56012 |
 | `screen_report.md` | **Table 5 / Figure 2.** Rule-variant screen: full 32-row grid, which rule forms are determined, failure modes, predictions of passing variants, discriminating experiment. | d7c608f241b2 |
 
@@ -24,7 +24,7 @@ All checksums are SHA-256 of the files as generated.
 | `screen_criteria.md` | **Supp. Methods.** Pre-registered pass criteria, fixed before any variant was run, including the documented revisions (XIAP removal, R4 redefinition). | 7b7778d87cdf |
 | `rules_justification.md` | **Supp. Methods.** Three-tier justification of every rule: mechanical, structural override, or fitted. Contains the explicit statement of which rules were data-influenced. | 038e95b20bdd |
 | `validation_nutlin_A549.csv` | **Supp. Table S3.** The MDM2-inhibition proteomics mapped onto model nodes, with log2 fold change and directional calls. | b73b1021a262 |
-| `screen_results.json` | **Supp. Data.** Machine-readable full screen output: every variant, every condition, full attractor, failed criteria. | 7dddf4dd0dbd |
+| `screen_results.json` | **Supp. Data.** Machine-readable full screen output: every variant, every condition, full attractor, failed criteria. | 975e5d480d13 |
 | `network_changelog.csv` | **Supp. Table S4.** All 28 changes from the 117-edge network to the curated network, each with original sign, action and reason. | 1cdfd5266397 |
 
 ## TIER 3 — Code (repository / Zenodo)
@@ -63,15 +63,6 @@ from its inputs.
 **Also required in the repository, not generated here:**
 - `run01/raw/` — the archived OmniPath snapshot (raw API responses with URL, timestamp and checksum per file). Without this the network cannot be regenerated, because OmniPath updates continuously.
 - `final/manifest.json` — the run manifest for the 31-node build.
-
-## NOT for the report
-
-| file | why |
-|---|---|
-| `rules_v2.txt` | The hand-fitted rule set. Superseded by the screen, which does the same job by a stated procedure. Keep privately as a record. |
-| `screen_criteria_v1.md` | Superseded by v2. Keep only if you want to show the criteria revision history. |
-| `rules_default_OR_OR.txt`, `rules_exceptions.md` | Intermediate working files. |
-| `model_v2.bnd/.bnet/.cfg`, `cond_*.cfg` | Exports of the fitted rule set; regenerate from `rules_structural.txt` plus the chosen variant before use. |
 
 ---
 

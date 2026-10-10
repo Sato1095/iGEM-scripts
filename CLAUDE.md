@@ -16,11 +16,15 @@ wiki disagree, stop and flag it rather than changing either silently.
 
 ### What is NOT in this repository
 
-- **Structures (`.pdb`)** — already hosted in a folder on the wiki. Do not duplicate them
-  here; reference them.
+- **Trajectories and trajectory-analysis scripts** — published separately in the iGEM
+  GitLab repository. Nothing here produces the induced-contact counts or RMSD plateaus.
 - **Figures and `.svg` assets** — these must go through the iGEM uploads tool onto
   `static.igem.wiki`. They do not belong here.
 - **Wiki code** — HTML/CSS/JS live in the separate wiki repository.
+
+Structures (`.pdb`) **are** published here, alongside the scripts that read them: the
+RFdiffusion target, the PMI benchmark, and the 2,000 AlphaFold Multimer designs that
+stage 3 scores.
 
 ---
 
@@ -61,10 +65,11 @@ output format or output file names.
 After editing, re-run the script where inputs still exist and confirm the output is
 unchanged. If it cannot be re-run, record that in its README rather than assuming.
 
-### 3. The three selection scripts stay separate
+### 3. The selection funnel stays as it is
 
-Stage 1, Stage 2 and Stage 3 could be merged into one cleaner script. **Do not.** That
-the funnel evolved through three attempts — each written because the previous one missed
+Three stages, two scripts: stages 1 and 2 are `z-score_filter.py` read two ways, stage 3
+is `rank_binders.py`. They could be merged into one cleaner script. **Do not.** That the
+funnel evolved through three attempts — each written because the previous one missed
 something — is the team's main modelling contribution. Merging them destroys the evidence
 for the argument the wiki makes.
 
@@ -110,17 +115,25 @@ the leading degrader candidate. Target binding and degradation efficiency are se
 
 ### Molecular dynamics scripts
 
-The MD setup and trajectory-analysis scripts are in this repository. Protocol, which the
-READMEs should state consistently:
+The MD **setup** scripts are in this repository; the trajectory analysis is in GitLab.
+Protocol, which the READMEs should state consistently:
 
-- GROMACS 2022, AMBER99SB-ILDN force field, TIP3P water, 0.15 M NaCl, 300 K, 1 bar
-- cubic box, minimum 1.0 nm solute-to-edge, neutralised, energy-minimised
+- GROMACS 2022, AMBER99SB-ILDN force field, TIP3P water, 300 K, 1 bar
+- **neutralising counter-ions only — no background salt.** `genion` is called with
+  `-neutral` and no `-conc`. These are not 0.15 M NaCl simulations.
+- cubic box, minimum 1.0 nm solute-to-edge, energy-minimised
 - staged equilibration: NVT then NPT with position restraints, then unrestrained production
-- 100 ns for inhibitor and ternary systems; **150 ns** for VHL–pHIF1
-- analysed with native GROMACS tools and MDAnalysis
-- pHIF1 parametrised with GAFF2 via ACPYPE (non-canonical residues); hydroxyproline is
-  present in the force field as a heteroatom residue, so assembled PROTACs needed no
-  special ligand parametrisation
+- nonbonded settings are CHARMM-style and deliberate: rcoulomb = rvdw = 1.2 nm,
+  Force-switch from 1.0 nm, no DispCorr. Not the AMBER reference values; used across every
+  system so they stay comparable. Report them as written.
+- `md.mdp` is **100 ns in both routes**. The published VHL–pHIF1 trajectory is 150 ns —
+  that run was continued past what the script specifies.
+- pHIF1 as a free peptide is parametrised with GAFF2 via ACPYPE, because homoleucine is
+  absent from AMBER99SB-ILDN and pdb2gmx cannot build it. The assembled PROTACs were built
+  without homoleucine, leaving 4-hydroxyproline as their only non-canonical residue —
+  which the force field already carries — so they needed no ligand parametrisation.
+- `run_pipeline.sh` (the general route) passes no `-ff`, so its force field was answered at
+  the prompt rather than recorded. Those runs used AMBER99SB-ILDN.
 
 **Check for discrepancies.** These scripts were written at different times. Confirm the
 force field, water model, salt, temperature, pressure, box size and run length are
@@ -148,13 +161,17 @@ Points worth preserving in the READMEs, because they are what make the work defe
 - **One edge was restored by hand against the thresholds**: KRAS→PI3K, supported by a
   single resource. Without it the whole PI3K/AKT arm is disconnected from the perturbed
   node. It is flagged in the network as a manual addition — keep that flag visible.
-- **Curation** resolved 38 ambiguous edges into five recognisable error classes (reverse
-  records; signs contradicting their own annotations; reciprocal sequestration;
-  text-mining artefacts; transcriptional bypasses). PIK3CA/PIK3R1 merged into one PI3K
-  node; PARP1 removed.
-- **Rules**: 29 total — 12 from the default convention, 17 structural overrides. The
-  validation tool checks each rule back against the edge signs and reports edges no rule
-  uses, so a deliberate omission stays distinguishable from an accident.
+- **Curation** adjudicated 40 edges by hand across the build and curation steps — 25
+  reviewed sign calls in `decisions_final.csv`, 15 corrections in `curate_network.py`.
+  Thirty-seven fall into five recognisable error classes (reverse records; signs
+  contradicting their own annotations; reciprocal sequestration; text-mining artefacts;
+  transcriptional bypasses); the other three are clamped-input drops. PIK3CA/PIK3R1
+  merged into one PI3K node; PARP1 removed. All 28 resulting changes are in
+  `network_changelog.csv`.
+- **Rules**: 29 total — 3 clamped inputs, 15 left at the default convention, 11 structural
+  overrides. The validation tool checks each rule back against the edge signs and reports
+  **17 edges that no rule uses**, so a deliberate omission stays distinguishable from an
+  accident. (Those 17 are unused *edges*, not overrides — easy to conflate.)
 - **Asynchronous updating**, one node per step. Fixed points are identical under either
   scheme; only cyclic attractors differ.
 - **Value percolation is exact, not sampled.** All 29 nodes fix within six rounds in every
@@ -197,7 +214,7 @@ These act as a checksum. If a cleanup changes any of them, something has gone wr
 - Z2: net charge −8 (rejected at the chemistry gate)
 - Induced MDM2–VHL contacts: PZ1 ~450–600, PMI-PROTAC ~300–380, PZ2 ~200–300, PZ3 ~130–200
 - Pathways: 117 edges after filtering → **29 nodes, 99 edges** after curation; 29 rules
-  (12 default, 17 overrides); 1 fixed point per condition out of 6.7 × 10⁷ states;
+  (3 inputs, 15 default, 11 overrides); 1 fixed point per condition out of 6.7 × 10⁷ states;
   32 variants, 4 satisfy all criteria, **4 of 32** show true synergy (28 kill, but 24 of
   those are KRAS-alone)
 
@@ -224,21 +241,17 @@ reference values in documentation until the team has resolved how they are prese
 
 ---
 
-## Suggested layout
+## Layout
 
 ```
-analysis/
-  README.md                  ← the pipeline in order, and what each stage fixed
-  01_composite_zscore/       ← Stage 1 + README
-  02_filtered_pharmacophore/ ← Stage 2 + README
-  03_interface_chemistry/    ← Stage 3 + README
-  md/                        ← setup and trajectory analysis
-  pathways/                  ← network build, curation, rules, percolation, screen
-  figures/                   ← figure-generating scripts (output goes to the wiki)
+de novo binders/
+  Collab Result/       generation: the 2,000-candidate pool and its inputs
+  Filter Pipeline.py/  the three-stage selection funnel, and the figure scripts
+  MD simulations/      GROMACS setup for the inhibitor, ternary and VHL systems
+  Pathways/            network build, curation, rules, attractors, variant screen
 ```
 
-Each README should state: what the script does, what it takes as input, what it produced,
-and — where relevant — what it could not catch and which stage addressed that.
-
-The top-level README should also record the environment: Python version, key package
-versions, GROMACS 2022, AMBER99SB-ILDN.
+Each directory has a README stating what the scripts did, what they took as input, what
+they produced, and — for the funnel — what each stage could not catch and which later
+stage addressed it. The top-level README records the environment: Python and package
+requirements, GROMACS 2022, AMBER99SB-ILDN.

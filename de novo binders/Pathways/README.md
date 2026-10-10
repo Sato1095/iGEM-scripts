@@ -173,6 +173,11 @@ tension is stated rather than settled.
 | `model.{bnd,cfg,bnet}` | MaBoSS and BoolNet exports |
 | `CHECKSUMS.md`, `FINAL_REPORT_MANIFEST.md`, `checksums.txt` | artefact ledgers |
 
+`model_scope_v1.txt` keeps its version suffix on purpose: `final/manifest.json`
+records that exact filename and its SHA-256 as an input to the committed build.
+Renaming it would break that chain, and editing the manifest would falsify a
+provenance record.
+
 ### The OmniPath snapshot is pinned — do not re-query
 
 `run01/raw/` holds the raw API responses, each with its URL, fetch timestamp,

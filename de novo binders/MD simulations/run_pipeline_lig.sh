@@ -42,8 +42,8 @@
 #   space, force-switching improves energy conservation, and omitting
 #   DispCorr slightly underestimates density. The effect on structural
 #   observables -- RMSD, RMSF, Rg, contacts, buried surface area -- is
-#   negligible, but absolute free energies would be affected, so any
-#   MM-GBSA calculation on these trajectories should note the deviation.
+#   negligible. Absolute free energies would be affected, so these
+#   trajectories support structural comparison and not energetic estimates.
 #
 #   Report these values as written, not the AMBER defaults.
 #
