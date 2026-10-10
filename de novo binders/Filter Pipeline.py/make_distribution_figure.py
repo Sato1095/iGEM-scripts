@@ -1,10 +1,41 @@
 #!/usr/bin/env python3
 """
-make_distribution_figure.py
+make_distribution_figure.py — the two-panel "where the designs sit" figure
+for the de novo MDM2 binder strand.
 
-High-resolution / publication-quality figure:
-Distribution of the 2000-candidate pool on the structure-based
-selection axes, with the PMI benchmark and the selected designs marked.
+WHAT THIS DID
+-------------
+Plotted the whole 2,000-candidate pool on the stage 3 selection axes, so
+the three named candidates could be shown in context rather than quoted
+as bare numbers. It computes nothing: every value is read from the stage 3
+table.
+
+  left panel   apolar BSA per residue vs intermolecular contacts, split by
+               whether all three sub-pockets are filled, with the PMI
+               benchmark quadrant shaded
+  right panel  net-charge histogram with the chemistry gate at -4, which
+               is the panel that shows why Z2 is rejected
+
+INPUT
+-----
+    gate_filter_results_full.csv — the stage 3 table, all 2,000 rows.
+    This is rank_binders.py's structural_ranking_full.csv, committed here
+    under the name the team archived it as.
+
+PRODUCED
+--------
+    design_distribution.png (600 dpi) and design_distribution.pdf, both
+    with transparent backgrounds, in the working directory. Figures are
+    not kept in this repository — they go through the iGEM uploads tool to
+    static.igem.wiki.
+
+RELATIONSHIP TO make_verdict_figures.py
+---------------------------------------
+That script's figure 2 is a later, simpler version of this same figure.
+Both are kept: this one is the 600 dpi / vector-PDF version with the
+reference-envelope shading, and it labels the candidates by role rather
+than by Z-number. They are not interchangeable, and the two disagree on
+nothing except presentation.
 """
 
 import pandas as pd
@@ -35,22 +66,28 @@ plt.rcParams.update({
 # ------------------------------------------------------------
 # Input / output
 # ------------------------------------------------------------
-INPUT = (
-    r"C:\Users\dimko\OneDrive\Υπολογιστής"
-    r"\Inhibitor_Validation\results_chimerax"
-    r"\structural_ranking_full.csv"
-)
+# Both were absolute paths into a Windows OneDrive folder
+# (C:\Users\dimko\...\Inhibitor_Validation\results_chimerax\), so this script
+# ran on exactly one machine. Repointed at the committed copy of the same
+# table, which now sits beside this script. The output BASENAMES are
+# unchanged -- design_distribution.png / .pdf, now written to the working
+# directory instead of that folder.
+INPUT = "gate_filter_results_full.csv"
 
-OUTPUT_BASE = (
-    r"C:\Users\dimko\OneDrive\Υπολογιστής"
-    r"\Inhibitor_Validation\results_chimerax"
-    r"\design_distribution"
-)
+OUTPUT_BASE = "design_distribution"
 
 df = pd.read_csv(INPUT)
 
 # ------------------------------------------------------------
 # Recompute gates consistent with corrected site tolerance = 14 Å
+#
+# NOTE: nothing below reads gate_site or passed_gates -- neither panel uses
+# them, so this block has no effect on the figure. It is kept because it is
+# the only in-code record that 14 Å, not rank_binders.py's 8.0 Å default, is
+# the site tolerance the committed stage 3 table was produced with. The 14 Å
+# value is also what README.md's invocation passes via --site-tol.
+# Left as-is rather than removed: deleting it would erase that record, and
+# correcting the stale 8.0 default would change stage 3's behaviour.
 # ------------------------------------------------------------
 df["gate_site"] = df["site_dist"] <= 14
 df["passed_gates"] = (
@@ -60,7 +97,16 @@ df["passed_gates"] = (
 )
 
 # ------------------------------------------------------------
-# PMI AF3 benchmark
+# PMI AF3 benchmark — the meets-or-exceeds thresholds stage 3 selects on.
+#
+# Typed in here rather than scored from bench_PMI_norm.pdb, so these will
+# not follow if the benchmark is re-scored. They match the values stage 3
+# used for the committed table.
+#
+# The benchmark is an AF3 domain-receptor structure while the designs are
+# AlphaFold Multimer, so the BSA comparison is cross-predictor — a caveat
+# the write-up states. The BSA figures are NOT settled on the wiki; do not
+# treat 40.0 as a fixed reference value in documentation.
 # ------------------------------------------------------------
 PMI = {
     "bsa": 40.0,
@@ -69,7 +115,13 @@ PMI = {
 }
 
 # ------------------------------------------------------------
-# Designs to highlight
+# Designs to highlight, keyed by (design, n).
+#
+# These are the three candidates the funnel produced: 42.3 = Z1,
+# 267.3 = Z2, 131.2 = Z3. The labels below name them by the role each
+# plays in the argument rather than by Z-number, so the legend reads as
+# bare "131.2" where the canonical naming is "Z3 (131.2)". Left as-is
+# because the strings are rendered figure content; flagged for the team.
 # ------------------------------------------------------------
 PICKS = {
     (131, 2): dict(

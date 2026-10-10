@@ -2,23 +2,67 @@
 """
 analyze_designs.py
 ==================
-Analyse the full RFdiffusion/ProteinMPNN candidate pool and show where the
-chosen designs (and reference peptides) fall in both the AlphaFold-metric space
-and an independent physicochemical space.
+Context plots for the de novo MDM2 binder pool. NOT a stage of the
+selection funnel — nothing downstream consumes its output.
 
-Purpose
--------
-The composite Z-score ranks purely on AlphaFold-derived metrics (i_ptm, plddt,
-i_pae, rmsd). Those metrics score the *predicted geometry* and are blind to the
-peptide's chemistry, which is how an acidic, solvent-exposed candidate can rank
-highly for a hydrophobic groove. This script therefore computes:
+WHAT THIS DID
+-------------
+Showed where the chosen designs sit in the full 2,000-candidate
+distribution, in two spaces at once: the AlphaFold-metric space the
+funnel ranks on, and an independent sequence-level physicochemical space
+it is blind to. The argument it was written to make is that a candidate
+can rank highly on predicted geometry while being chemically wrong for a
+hydrophobic groove — the same argument stage 3 (rank_binders.py) later
+settled from structures rather than from sequence.
 
-  1. the composite Z-score for all candidates (so you can see how the picks rank), and
-  2. sequence-level physicochemical properties (hydrophobicity, net charge,
-     aromatic/anchor content) that the structural metrics cannot see.
+It computes:
+  1. the composite Z-score for all candidates, and
+  2. physicochemical descriptors (GRAVY, net charge at pH 7.4,
+     aromaticity, hydrophobic-anchor fraction, acidic fraction),
+then overlays the picks and the reference peptides (PMI, PDI, p53 17-29)
+on the distributions.
 
-It then plots where the chosen designs and the reference peptides sit in the
-full distribution of ~2000 candidates, in both spaces.
+INPUT
+-----
+    Collab Result/design.fasta — the same 2,000-record file stage 1 reads.
+    (Referenced as design_fasta.txt in the usage line below; same file.)
+
+PRODUCED
+--------
+    candidates_annotated.csv, picks_summary.csv, reference_physchem.csv,
+    and eight PNGs, into --outdir. None of these are committed.
+
+TWO THINGS TO KNOW BEFORE QUOTING IT
+------------------------------------
+1. ITS RANKS ARE NOT THE FUNNEL'S RANKS. The composite Z formula here
+   (z_iptm + z_plddt - z_ipae - z_rmsd) is the same signed sum
+   z-score_filter.py uses, but it is computed over the UNFILTERED pool of
+   2,000, whereas the funnel scores only the candidates that survive the
+   confidence filter. Re-centring on the survivors changes the order:
+
+       unfiltered (this script)   rank 1 = 366.3, rank 2 = 267.3,
+                                  rank 8 = 42.3
+       filtered   (stage 1)       rank 1 = 42.3,  rank 2 = 267.3
+
+   So Z1 (42.3) is the top composite pick only after the confidence
+   filter. This script labels it "best / top-ranked" while its own table
+   puts it 8th. Left as-is — the labels are output content — but do not
+   cite a rank from here as the funnel's rank.
+
+2. ITS THIRD PICK IS 130.3, NOT Z3. PICKS below names
+   (130, 3) = MEEFKKLWEELMKKA, under the older "full mimic / minimal
+   mimic / best" framing. That is a real, distinct design — it is in the
+   stage 3 table with net charge 0, 41 contacts, 3/3 pockets, passing the
+   gates but not selected — and it is NOT Z3 (131.2, MKPEEVGEMLLSVLK).
+   This script predates the Z1/Z2/Z3 naming and was never updated to it.
+
+   Net charges here also differ from stage 3's: this script uses
+   Biopython's charge_at_pH(7.4) (42.3 -> -2.75, 267.3 -> -8.74), while
+   the chemistry gate uses a plain K+R-D-E count (-2.0, -8.0). The gate
+   acted on the latter.
+
+Re-run and confirmed working during the 2026 documentation pass; its
+outputs are not committed, so there was nothing to compare them against.
 
 Usage
 -----
@@ -38,7 +82,6 @@ import os
 import re
 import sys
 
-import numpy as np
 import pandas as pd
 import matplotlib
 matplotlib.use("Agg")
@@ -55,8 +98,10 @@ REFERENCES = {
     "p53(17-29)": "SQETFSDLWKLLP",
 }
 
-# The three designs carried forward, keyed by (design_index, seq_index).
-# Labelled exactly as in the project write-up.
+# The three designs this script marks, keyed by (design_index, seq_index).
+# These labels are from the write-up as it stood when this was written. They
+# are NOT the current Z1/Z2/Z3 naming, and (130, 3) is not Z3 — see the
+# header. Left unchanged because the strings are plotted output.
 PICKS = {
     (42, 3):  "42.3  (best / top-ranked)",
     (267, 3): "267.3 (minimal mimic)",
@@ -141,7 +186,13 @@ def zscore(series):
 
 
 def add_composite(df):
-    """Composite Z as defined in the project: Z_iptm + Z_plddt - Z_ipae - Z_rmsd."""
+    """Composite Z as defined in the project: Z_iptm + Z_plddt - Z_ipae - Z_rmsd.
+
+    Computed over every row passed in — i.e. the whole 2,000-candidate pool,
+    with no confidence filter first. z-score_filter.py applies the filter
+    before scoring, so its composite values and ranks differ from these.
+    See the header: 42.3 is 8th here and 1st there.
+    """
     df["z_iptm"] = zscore(df["i_ptm"])
     df["z_plddt"] = zscore(df["plddt"])
     df["z_ipae"] = zscore(df["i_pae"])
@@ -261,6 +312,9 @@ def main():
     df.sort_values("composite_rank").to_csv(out_csv, index=False)
 
     # ---- percentile summary for the picks ----
+    # DEAD CODE: pct() is never called. The rank_pct column below is computed
+    # inline from composite_rank instead. Kept rather than deleted; flagged
+    # for the team to remove if they prefer.
     def pct(col, val, higher_is_better=True):
         p = (df[col] < val).mean() * 100
         return p if higher_is_better else 100 - p
