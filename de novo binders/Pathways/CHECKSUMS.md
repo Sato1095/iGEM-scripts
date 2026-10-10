@@ -16,7 +16,7 @@ Not listed: `final/` and `run01/raw/`, whose provenance is recorded in
 | file | sha256 |
 |---|---|
 | `FINAL_REPORT_MANIFEST.md` | `72978739d57798b9319f1446f1b5e100b2af9c4615e466d47ae8c0aef29911cc` |
-| `README.md` | `a0eceadfcb52f9e21a50f51aaa2cd01b6d35b864dbb4089466a08c28dbd8fe75` |
+| `README.md` | `84ba8a487eafda1251743630819b4b0c1c4544af5eb3b568e433c55de0d8148c` |
 | `attractor_analysis.py` | `357c8e6e5d511c85f6583fe1579301796bc376866b4c074ddc1b7c6e3b8861e7` |
 | `attractor_report.md` | `2f8951d56012a03a33bed6bbd137b9dec0df2cce66faeee41e5c3fcb854d0395` |
 | `build_network.py` | `1b360d1c67babfb69d8d936af12668507aa84b1f43ad410f9feb107375f7df4f` |

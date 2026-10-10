@@ -1,248 +1,184 @@
-# Pathways — Boolean model of apoptotic commitment in A549
+# Pathways — a Boolean model of apoptotic commitment
 
-Asks one question: does degrading MDM2 and KRAS together kill a cell that
-survives either alone?
+**The question:** does degrading MDM2 and KRAS *together* kill an A549 cell
+that survives either one alone?
 
-A549 is TP53 wild-type, KRAS G12S, CDKN2A-deleted, which is what makes it the
-right background — p53 is intact and available to be released, and the KRAS
-arm is independently druggable. This is a separate strand from the structural
+A549 is the right background for asking it — TP53 wild-type, so there is
+intact p53 to release, KRAS G12S, so the other arm is independently
+druggable, and CDKN2A deleted. This is a separate strand from the structural
 work; it shares the project's targets, not its methods.
+
+Run the whole thing with `run_pipeline.sh` (or `run_pipeline.ps1` on
+Windows). Python 3.8+, standard library only.
 
 ---
 
-## The pipeline, in order
+## How the model was built
 
-Run it all with `run_pipeline.sh` (POSIX) or `run_pipeline.ps1` (Windows).
-Python 3.8+, standard library only.
+### 1 · Build the network — `build_network.py`
 
-### 1 · Network construction — `build_network.py` → `final/`
+Every edge comes from OmniPath, with its sign, its supporting resources and
+its PMIDs carried along. We declared the 31 nodes we wanted
+(`model_scope_v1.txt`) and fetched every qualified edge among them, rather
+than growing the network outward from KRAS and MDM2 — that way the boundary
+of the model is a decision someone can argue with, not a side effect of how
+far a search happened to run.
 
-Builds a signed, directed, provenance-tracked network from OmniPath. No
-biology is hard-coded in the script: the scientific choices arrive as the
-declared node scope, the evidence thresholds and the reviewed sign calls.
+An edge had to be directed, reported by at least 2 independent resources,
+with at least 1 reference and curation effort of 5 or more. Everything
+rejected is written out with the reason.
 
-We ran it in **scope mode**: `model_scope_v1.txt` declares 31 nodes as the
-model's stated boundary, and the script fetches every qualified edge among
-them. The alternative — growing the network outward from the anchors — would
-have made the boundary a side effect of search parameters rather than a
-decision anyone could review.
+**203,001 interactions → 117 edges among 31 nodes.**
 
-**Evidence thresholds:** directed, ≥2 independent resources, ≥1 reference,
-curation effort ≥5. Every rejected edge goes to an exclusion file with its
-reason.
+### 2 · Curate it — `curate_network.py`
 
-→ 203,001 interactions fetched, 28,146 qualified, **117 edges among 31 nodes**.
+Evidence thresholds tell you how well an edge is attested, not whether it
+points the right way. Forty edges were fixed by hand, and they fall into
+five recurring problems with any aggregated interactome:
 
-### 2 · Curation — `curate_network.py` → `network_*.csv`
+- **reverse records** — `APAF1→CYCS`, when cytochrome c is released *from*
+  mitochondria, not made by APAF1
+- **signs that contradict their own annotations** — `AKT1→FOXO3` recorded as
+  activation, when the phosphorylation it cites excludes FOXO3 from the nucleus
+- **reciprocal sequestration** — one binding event recorded in both
+  directions, which in Boolean form becomes a mutual-inhibition toggle
+- **text-mining artefacts** — records resting only on automated readers,
+  which routinely swap enzyme and substrate
+- **transcriptional bypasses** — `TP53→CASP3`, letting p53 fire the
+  executioner caspase without ever permeabilising the mitochondrion
 
-Evidence thresholds measure how well an edge is attested, not whether it
-points the right way. Forty edges were adjudicated by hand across steps 1 and
-2 — 25 as reviewed sign calls inside step 1, 15 as corrections here — falling
-into five recurring failure modes of an aggregated interactome:
+PIK3CA and PIK3R1 became a single PI3K node (recorded as mutually
+activating, which in Boolean form latches on forever). PARP1 came out — once
+`CASP3→PARP1` is removed as a readout out-edge, nothing is left for it to
+read.
 
-| failure mode | example |
-|---|---|
-| reverse records | `APAF1→CYCS`: cytochrome c is released from mitochondria, not produced by APAF1 |
-| signs contradicting their own annotations | `AKT1→FOXO3` recorded as activation, when the phosphorylation excludes FOXO3 from the nucleus |
-| reciprocal sequestration | one binding event recorded both ways, which in Boolean form is a mutual-inhibition toggle |
-| text-mining artefacts | records resting only on automated readers, which routinely swap enzyme and substrate |
-| transcriptional bypasses | `TP53→CASP3`, letting p53 fire the executioner caspase without mitochondrial permeabilisation |
+**One edge was put back against our own thresholds.** `KRAS→PI3K` has a
+single supporting resource, so step 1 rejected it — which left the whole
+PI3K/AKT arm with no route from the perturbed node, and the model unable to
+ask its own question. It is tagged `MANUAL_ADD` in the edge list, and that
+tag should stay visible wherever the network is shown.
 
-Also here: **PIK3CA and PIK3R1 merge into one PI3K node** (recorded as
-mutually activating, which latches ON permanently in Boolean form), and
-**PARP1 is removed** (with `CASP3→PARP1` gone as a readout out-edge, its only
-remaining in-edges are transcriptional, so it cannot act as a cleavage
-readout — apoptosis is read from CASP3/CASP7 instead).
+**117 edges → 29 nodes, 99 edges.** Every change is in
+`network_changelog.csv` with its reason.
 
-**One edge was restored against the thresholds.** `KRAS→PI3K` is
-single-resource in OmniPath and was rejected in step 1, which left the entire
-PI3K/AKT arm disconnected from the perturbed node — the model could not have
-addressed its own question. It is tagged `provenance=MANUAL_ADD` in the edge
-list; that tag should stay visible wherever the network is shown.
+### 3 · Write the rules — `make_rules.py`
 
-→ **29 nodes, 99 edges**, with all 28 changes in `network_changelog.csv`.
+An edge list cannot tell you whether two activators combine with AND or OR.
+Group a node's regulators and the rule comes down to two questions: is one
+activator enough to switch it on, and is one inhibitor enough to switch it
+off? Saying yes to both is the default, and it assumes nothing the edges do
+not already claim.
 
-### 3 · Rules — `make_rules.py` → `rules_structural.txt`
+So the only things worth justifying are the departures. Of 29 rules, 3 are
+clamped inputs, 15 are left at the default, and 11 depart from it for
+reasons of mechanism — the apoptosome needs both cytochrome c *and* Apaf-1,
+BAK is already sitting at the membrane rather than waiting to be made, and
+so on. `rules_justification.md` goes through them one at a time.
 
-An edge list cannot say whether two activators combine with AND or OR. The
-script drafts a starting point under one default convention — *any one
-activator suffices, any one inhibitor suffices* — flags the nodes where that
-is likely wrong, and then checks the hand-edited result back against the
-network.
+This is the only step with human judgement in the middle of it:
+`rules_structural.txt` was written by hand from the draft, so it is an input
+to the pipeline rather than something the pipeline regenerates. The script's
+check mode is what keeps that honest — it re-derives each rule's behaviour
+and compares it against the edge signs, and reports every edge no rule uses,
+so a deliberate omission stays distinguishable from an accident.
 
-**This is the one step with human judgement in the middle of it.**
-`rules_structural.txt` was written by hand from the draft and is an *input*
-to the pipeline, not something it regenerates.
+### 4 · Find the attractors — `attractor_analysis.py`
 
-The check verifies, for every input of every rule, that the rule's actual
-monotone behaviour matches the sign of the edge, and reports edges no rule
-uses. 29 rules, 0 problems, **17 warnings** — all of the same kind, an edge
-the rules deliberately leave unused. Each is accounted for by an `OVERRIDE`
-comment in the rules file naming the edge and the reason. An eighteenth would
-mean something had been dropped by accident; that is what the check is for.
+Clamp the perturbed inputs, then repeatedly fix any node whose rule has
+become constant no matter what the rest of the network does. In all four
+conditions this determines all 29 nodes within six rounds.
 
-Exports `model.bnd`/`.cfg` (MaBoSS) and `model.bnet` (BoolNet). Steps 4
-and 5 parse the rules file directly and do not read either.
+That is a proof rather than a sample: **each condition has one fixed point,
+it is the only attractor, and every one of the 67,108,864 starting states
+reaches it.** No cycles, and the outcome does not depend on where you start.
+Random-start sampling was run alongside and agreed every time.
 
-### 4 · Attractors — `attractor_analysis.py` → `attractor_report.md`
+### 5 · Screen the alternatives — `run_screen.py`
 
-**Value percolation is exact, not sampled.** Clamp the perturbed inputs, then
-repeatedly fix any node whose rule has become constant over every assignment
-of its still-free inputs, and iterate.
-
-In all four conditions every one of the 29 nodes fixes within **six rounds**.
-Each condition therefore has a single provable fixed point: it is the only
-attractor, and it is reachable from every one of the 2^26 = 67,108,864 states
-of the free subspace. No cyclic attractors, and the outcome does not depend
-on the initial state.
-
-Updating is **asynchronous**, one node per step. Fixed points are identical
-under either scheme; only cyclic attractors would differ, and there are none.
-Random-start sampling was run alongside and agreed in every condition — it is
-corroboration, and proves nothing on its own.
-
-### 5 · Variant screen — `run_screen.py` → `screen_report.md`
-
-Five rules are defensible in two forms each, so all 2^5 = 32 combinations are
-scored against the pre-registered criteria, under all four conditions.
-
-**The criteria were frozen before any variant was run.** That ordering is the
-whole point, and it must never be described the other way round.
-`screen_criteria.md` is the frozen document; `run_screen.py` transcribes
-its C1 and C2 into code. Only the control and MDM2-degraded conditions
-carry criteria; no data in hand perturbs KRAS, so `KRAS_degraded` and
-`both_degraded` are predictions.
+Five rules are defensible in two forms each, so all 32 combinations are
+scored against criteria that were **frozen before any variant was run**
+(`screen_criteria.md`). That ordering is the whole point of the exercise.
 
 | | |
 |---|---|
-| satisfy all criteria | **4 of 32** |
-| show true synergy | **4 of 32** |
-| apoptosis under control | 0 of 32 |
-| under MDM2 degradation alone | 0 of 32 |
+| satisfy every criterion | **4 of 32** |
+| show true synergy — the combination kills, neither single agent does | **4 of 32** |
+| apoptosis under MDM2 degradation alone | 0 of 32 |
 | under KRAS degradation alone | 24 of 32 |
 | under the combination | 28 of 32 |
 
-The two fours are **overlapping but different sets**, sharing two members.
-They are not the same result and should not be quoted as one.
-
-All four passers need R1 form B and R5 form B. **R2 — the PUMA rule (BBC3) —
-is left undetermined**: two passers carry each form, because FOXO3 is off in
-every condition the criteria constrain, so the data cannot separate them. The
-synergy argument turns on R2, and that it is unresolved is reported, not
-smoothed over.
-
-**R1 is reported, not resolved.** The screen needs form B, a coincidence
-detector requiring input from both arms; the binding literature leans toward
-form A, since BAD is the canonical high-affinity BCL-XL antagonist. That
-tension is stated rather than settled.
+The two fours are **different, overlapping sets** sharing two members — not
+one result quoted twice.
 
 ---
 
-## What the model does not claim
+## What came out, and what it is worth
 
-- **It is not validated.** Consistency with one drug arm, using rules
-  selected after inspecting model–data disagreements, is a constraint, not
-  evidence of correctness.
-- **Nothing tests the KRAS arm.** No dataset in hand perturbs KRAS, so the
-  `KRAS_degraded` and `both_degraded` outcomes are predictions rather than
-  results, and neither condition contributes a pass criterion.
-- **Bortezomib and seven other drugs in the panel are held back** as the only
-  genuine out-of-sample test available.
-- **Nutlin is not degradation.** Nutlin inhibits MDM2–p53 binding; the model
-  clamps MDM2 to 0. MDM2 protein rose 2.84 log2 under nutlin precisely
-  because p53 transcribes it — behaviour a clamped model cannot show.
-- **BCL2L11, PMAIP1, MCL1 and MDM4 were undetected** and are unconstrained by
-  any criterion.
+Every passing variant needs R1 in form B and R5 in form B. Two rules stay
+open, and both are reported rather than resolved:
+
+- **R2, the PUMA rule.** The synergy argument turns on whether PUMA is
+  p53-only or also FOXO3-driven, and this data cannot say: FOXO3 is off in
+  every condition the criteria constrain, so both forms behave identically.
+- **R1.** The screen needs form B, a coincidence detector requiring input
+  from both arms. The binding literature leans the other way, since BAD is
+  the canonical high-affinity BCL-XL antagonist. The tension is stated, not
+  settled.
+
+**This is model selection, not validation.** The criteria come from the same
+proteomics that made us look at these rules in the first place, so passing
+is a constraint on the model, not evidence it is right. Specifically:
+
+- Nothing tests the KRAS arm — no dataset in hand perturbs KRAS, so the
+  KRAS-degraded and both-degraded outcomes are predictions.
+- Nutlin is not degradation. It blocks MDM2–p53 binding; the model clamps
+  MDM2 to zero. MDM2 protein actually *rises* 2.84 log2 under nutlin,
+  because p53 transcribes it — something a clamped model cannot show.
+- BCL2L11, PMAIP1, MCL1 and MDM4 were never detected, so no criterion
+  touches them.
+- Bortezomib and seven other drugs in the panel are deliberately held back,
+  as the only genuine out-of-sample test we have.
+
+### One caveat that changes how to read R4
+
+`BAX` (+0.70) and `BAK1` (+0.71) both rise clearly in the proteomics, and
+neither was made a pass criterion. The reason is recorded in
+`screen_criteria.md` before the screen ran: these nodes mean "active", not
+"present", and the data pulls both ways — BAX and BAK1 rise while cytochrome
+c does not move.
+
+That exclusion decides R4. Either one as a criterion would cut the passing
+set from four to two and fix R4 as form B. So "R4 is undetermined" means
+*undetermined because we would not treat abundance as activity* — not that
+the data is silent. We did not amend the criteria or re-run, because
+changing a pass criterion after seeing results is exactly what freezing them
+is meant to prevent.
 
 ---
 
 ## Files
 
-| file | role |
+| | |
 |---|---|
 | `model_scope_v1.txt` | the 31 declared nodes — the model's stated boundary |
-| `decisions_final.csv` | 25 reviewed sign calls (5 signs, 20 drops), each with a rationale |
-| `final/` | step 1 output, including `manifest.json` and the 117-edge list |
-| `run01/raw/` | **the pinned OmniPath snapshot** |
-| `network_{edges,nodes,changelog}.csv` | the model network, 29/99, and all 28 changes |
-| `rules_structural.txt` | the 29 Boolean rules, overrides marked inline |
+| `decisions_final.csv` | 25 reviewed sign calls, each with a rationale |
+| `run01/raw/` | the archived OmniPath responses |
+| `final/` | step 1 output: the 117-edge network and its run manifest |
+| `network_{edges,nodes,changelog}.csv` | the curated network and every change to it |
+| `rules_structural.txt` | the 29 Boolean rules |
+| `rules_justification.md` | why each rule is what it is |
 | `screen_criteria.md` | the pre-registered criteria |
-| `rules_justification.md` | tier-by-tier justification of the rule set |
-| `validation_nutlin_A549.csv` | the MDM2-inhibition proteomics, mapped onto model nodes |
-| `attractor_report.md`, `screen_report.md`, `screen_results.json` | results |
+| `validation_nutlin_A549.csv` | the proteomics, mapped onto model nodes |
+| `attractor_report.md` · `screen_report.md` · `screen_results.json` | results |
 | `model.{bnd,cfg,bnet}` | MaBoSS and BoolNet exports |
-| `CHECKSUMS.md`, `FINAL_REPORT_MANIFEST.md`, `checksums.txt` | artefact ledgers |
+| `CHECKSUMS.md` · `FINAL_REPORT_MANIFEST.md` · `checksums.txt` | checksums for every artefact |
 
-`model_scope_v1.txt` keeps its version suffix on purpose: `final/manifest.json`
-records that exact filename and its SHA-256 as an input to the committed build.
-Renaming it would break that chain, and editing the manifest would falsify a
-provenance record.
+**The OmniPath snapshot is pinned.** `run01/raw/` holds the raw API
+responses, each with its URL, timestamp and checksum. OmniPath changes
+continuously, so re-fetching would quietly give a different network and
+invalidate everything downstream — the model is only reproducible against
+this archive.
 
-### The OmniPath snapshot is pinned — do not re-query
-
-`run01/raw/` holds the raw API responses, each with its URL, fetch timestamp,
-byte count and SHA-256 in a `.meta.json` beside it. `build_network.py` reuses
-a cached response whenever one matches the request, so the network rebuilds
-against the snapshot rather than against live OmniPath.
-
-OmniPath updates continuously. Re-fetching would give a different network and
-silently invalidate everything downstream. Do not pass `--refresh`, and do
-not delete this directory.
-
-Scope mode uses the `interactions` and `enzsub` responses. The six
-`annotations_*` responses are from exploratory runs that discovered phenotype
-sinks by annotation regex; they are kept as part of the archive but are not
-read when the node set is declared.
-
----
-
-## R4 is undetermined only because BAX and BAK1 were excluded
-
-This is the most important caveat on the screen, and it was established
-*after* the screen was run.
-
-`BAX` (+0.70) and `BAK1` (+0.71) are unambiguous UP calls in the Nutlin arm.
-Neither was made a pass criterion, for the reason recorded in
-`screen_criteria.md` §5 before any variant ran: these nodes mean
-"pore-forming and active", abundance is not activity, and the data pulls
-both ways — BAX and BAK1 rise while `CYCS` is unchanged, so a criterion on
-either would settle the guard logic on a reading the cytochrome c
-measurement does not support.
-
-That exclusion is doing real work. Scoring the committed results against
-the alternative:
-
-| | passing variants | R4 | passing *and* synergistic |
-|---|---|---|---|
-| as scored | **4** | undetermined | 2 |
-| if `BAX = 1` were a C2 criterion | 2 | **form B** | 1 |
-| if `BAK1 = 1` were a C2 criterion | 2 | **form B** | 1 |
-
-BAX and BAK1 give the same answer independently and together. So "R4 is
-undetermined" should be read as *undetermined given that abundance was not
-accepted as a proxy for activity* — not as *the data cannot speak to it*.
-The data can; we judged the reading unsafe.
-
-**The criteria were not amended and the screen was not re-run.** Changing a
-pass criterion after seeing results is what the freeze in
-`screen_criteria.md` exists to prevent, and tightening one to sharpen a
-result is no different from relaxing one to rescue it. If the team later
-decides BAX/BAK1 abundance is a fair proxy, the route its own status block
-prescribes is a dated amendment to the criteria with the reason, followed
-by a full re-run — not an edit to this result.
-
-## Known issues
-
-The scripts, their outputs and the supporting documents are consistent with
-each other. Two things are worth knowing.
-
-- **`model.cfg` sets every node to 0**, which is what the MaBoSS exporter
-  writes. If you open the model in MaBoSS, set the initial states to the
-  control attractor given in `rules_justification.md` §6 rather than using
-  the file as shipped.
-- **Ten nodes disagree between the structural rules and the Nutlin arm**,
-  and only two of them became screened rules. The other eight are listed in
-  `rules_justification.md` §5 and are open — two of them (`GSK3B`, and
-  `APAF1` once BCL-XL is required to survive) cannot be satisfied by any
-  rule set built on this network, which is a limit of the network rather
-  than of the rules.
+If you open the model in MaBoSS, note that `model.cfg` starts every node at
+0, which is just what the exporter writes. Set the initial states to the
+control attractor in `rules_justification.md` instead.
