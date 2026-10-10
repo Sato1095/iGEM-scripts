@@ -2,9 +2,17 @@
 # =============================================================================
 # prep_vhl_peptide.sh -- Ligand preparation for the VHL / LA-Hyp-Y-Hle-P rerun
 #
-# Produces everything needed before run_pipeline.sh:
+# Produces everything needed before run_pipeline_lig.sh:
 #     complex.gro   protein + peptide coordinates
 #     topol.top     AMBER99SB-ILDN protein + GAFF2 peptide, combined
+#
+# (NOT run_pipeline.sh, which is the general pdb2gmx route in this same
+# directory and cannot handle this system -- that is the whole point below.)
+#
+# THIS IS THE ONE SCRIPT THAT PINS THE FORCE FIELD
+#     FF="6" / WATER="1" are piped into pdb2gmx, so the protein topology is
+#     built with AMBER99SB-ILDN and TIP3P without anyone answering a
+#     prompt. run_pipeline.sh passes no -ff and relies on a human instead.
 #
 # WHY THE PEPTIDE IS TREATED AS A LIGAND
 #   LA-Hyp-Y-Hle-P contains two non-canonical residues -- 4-hydroxyproline
@@ -19,6 +27,27 @@
 # INPUT
 #   rank_1.pdb    Boltz-2 prediction of the VHL/peptide complex, with the
 #                 peptide written as HETATM records labelled LIG
+#
+# PRODUCED
+#   vhl_protein.pdb peptide_lig.pdb peptide_lig_H.pdb   the split and
+#                                                       protonated inputs
+#   peptide_lig_H.acpype/                               GAFF2 parameters
+#   vhl_processed.gro topol.top posre.itp               protein topology
+#   complex.gro                                         via combine_topology.py
+#
+# SCOPE, AND AN UNRESOLVED POINT
+#   This route was used for the VHL / pHIF1 system, with the peptide
+#   predicted by Boltz-2 as a HETATM ligand.
+#
+#   CLAUDE.md states that the assembled PROTACs (PZ1-PZ3, PMI-PROTAC)
+#   "needed no special ligand parametrisation" because hydroxyproline is
+#   in the force field as a heteroatom residue. That reasoning does not
+#   obviously carry: by the argument below, it is HOMOLEUCINE, not
+#   hydroxyproline, that forces the ligand route -- and the assembled
+#   PROTACs contain pHIF1, homoleucine included. Either those constructs
+#   were built some other way, or they went through a route not recorded
+#   here. Flagged rather than guessed at; the team should settle it before
+#   the protocol is published.
 #
 # Usage:
 #   module load gcc/9.4.0-eewq4j6 openmpi/4.1.2-akxtzzl gromacs/2022-47qrtrj
@@ -81,6 +110,13 @@ echo "  peptide with H : ${NH} atoms"
 #          the peptide is neutral and the comparison is structural rather
 #          than a free-energy calculation. Use -c bcc if charges matter.
 # -n 0   : net charge. LA-Hyp-Y-Hle-P is neutral -- verify for your construct.
+#
+# WORTH STATING IN THE WRITE-UP: Gasteiger is an empirical,
+# electronegativity-equalisation charge model, not a QM-derived one, and it
+# is a weaker choice than GAFF2's usual AM1-BCC partner. That is defensible
+# for the structural observables these trajectories were analysed for, and
+# it is the reason no binding free energy should be quoted from this
+# system. It is a methodological limitation, not an oversight.
 echo ""
 echo "[3/6] Generating GAFF2 parameters (ACPYPE)"
 acpype -i peptide_lig_H.pdb -c gas -n 0 -a gaff2
@@ -127,7 +163,7 @@ grep -A 10 '^\[ molecules \]' topol.top | sed 's/^/    /'
 
 echo ""
 echo "============================================================"
-echo "Ready for run_pipeline.sh"
+echo "Ready for run_pipeline_lig.sh"
 echo ""
 echo "Two things to check before running:"
 echo "  - the ligand molecule name in [ molecules ] matches the .itp"

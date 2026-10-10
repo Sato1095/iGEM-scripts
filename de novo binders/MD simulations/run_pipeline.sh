@@ -2,14 +2,51 @@
 # =============================================================================
 # run_pipeline.sh
 #
-# GROMACS 100 ns MD pipeline -- CHARMM36 / cubic box / TIP3P / Cl- only
+# GROMACS 2022, 100 ns MD -- AMBER99SB-ILDN / cubic box / TIP3P /
+# neutralising counter-ions only
+#
 # Protocol based on: doi:10.1186/s43088-026-00765-8 (100 ns instead of 300 ns)
+#
+# WHAT THIS DID
+#   The general-purpose route: any system pdb2gmx can build on its own.
+#   That is the MDM2 inhibitor complexes and the ternary
+#   MDM2 - PROTAC - VBC complexes, 100 ns each, one run per system with no
+#   replicates. Systems containing pHIF1 cannot go through here -- see
+#   run_pipeline_lig.sh and prep_vhl_peptide.sh for why.
+#
+# INPUT
+#   one PDB, passed as $1
+#
+# PRODUCED
+#   ions.mdp minim.mdp nvt.mdp npt.mdp md.mdp   run parameters
+#   processed.gro boxed.gro solvated.gro solv_ions.gro
+#   topol.top
+#   em.slurm nvt.slurm npt.slurm md.slurm       stage scripts, NOT submitted
+#
+# THE FORCE FIELD IS NOT PINNED BY THIS SCRIPT
+#   pdb2gmx below is called without -ff, so GROMACS prompts for the force
+#   field and it was answered by hand at run time. The runs used
+#   AMBER99SB-ILDN (team, Oct 2026), matching prep_vhl_peptide.sh, which
+#   does pin it. Earlier copies of this header said CHARMM36; that was
+#   wrong and has been corrected throughout.
+#
+#   Adding "-ff amber99sb-ildn" would make this reproducible without a
+#   human at the prompt. NOT added here, because it would change what the
+#   script does. Recommended for a future revision.
+#
+# IONIC STRENGTH: NEUTRALISING IONS ONLY
+#   genion is called with -neutral and no -conc, so the box carries only
+#   the counter-ions needed to neutralise the system -- there is no
+#   background salt. Any description of these runs as 0.15 M NaCl is
+#   wrong; the wiki and CLAUDE.md need correcting on this point.
 #
 # USAGE (run from the folder containing your PDB):
 #   bash run_pipeline.sh PMI-MDM2.pdb
 #
-# Preprocessing runs here directly (<1 min), then em -> nvt -> npt -> md
-# are submitted as a SLURM dependency chain. Log off after submission.
+# Preprocessing runs here directly (<1 min). The four SLURM stage scripts
+# are then WRITTEN BUT NOT SUBMITTED -- despite the note below, there is no
+# sbatch call anywhere in this file. Submit them yourself as a dependency
+# chain, em -> nvt -> npt -> md.
 # =============================================================================
 set -euo pipefail
 
@@ -23,7 +60,10 @@ WATER_MODEL="tip3p"
 BOX_TYPE="cubic"      # paper specifies cubic box
 BOX_DIST="1.0"        # minimum solute-to-wall distance (nm)
 ION_PNAME="NA"
-ION_NNAME="CL"        # paper: only Cl- added; -neutral handles the decision
+ION_NNAME="CL"        # -neutral picks whichever of the two is needed; for a
+                      # net-negative solute that is Na+ only, for a
+                      # net-positive one Cl- only. No background salt either
+                      # way -- see the header.
 
 GMX_MODULES="gcc/9.4.0-eewq4j6 openmpi/4.1.2-akxtzzl gromacs/2022-47qrtrj"
 PARTITION="gpu"
@@ -31,6 +71,9 @@ EQ_TIME="02:00:00"    # NVT/NPT are 100 ps each -- finish in minutes
 PROD_TIME="24:00:00"  # per production chunk
 PROD_CHUNKS=2         # 2 x 24h is a safe ceiling for 100 ns;
                        # GROMACS exits cleanly once nsteps is reached
+                       # NOTE: PROD_CHUNKS is never read. Nothing in this
+                       # script loops or submits, so the chunking it
+                       # describes is done by hand.
 
 if [ ! -f "$PDB_FILE" ]; then
     echo "ERROR: '$PDB_FILE' not found in $(pwd)." >&2
@@ -41,11 +84,25 @@ module purge
 module load $GMX_MODULES
 
 # ---------------------------------------------------------------------------
-#
-# Three key differences from AMBER/OPLS setups:
+# NONBONDED SETTINGS
 #   1. rcoulomb = rvdw = 1.2 nm  (not 1.0)
 #   2. vdwtype = Cut-off  +  vdw-modifier = Force-switch  +  rvdw-switch = 1.0
-#   3. NO DispCorr -- CHARMM36 was parameterized without dispersion correction
+#   3. NO DispCorr
+#
+# These three are CHARMM-style settings, and they are NOT the AMBER
+# reference values (1.0 nm plain cutoff with DispCorr = EnerPres) even
+# though the force field here is AMBER99SB-ILDN. That is deliberate: the
+# same settings are used for every simulation in this project, so the
+# systems stay comparable with each other. run_pipeline_lig.sh carries the
+# same block and the same reasoning.
+#
+# The trade-off, as stated there: the longer cutoff is more accurate in
+# direct space and force-switching improves energy conservation, while
+# omitting DispCorr slightly underestimates density. Structural
+# observables -- RMSD, RMSF, Rg, contacts, buried surface area -- are
+# affected negligibly; absolute free energies would not be.
+#
+# Report these values as written, not the AMBER defaults.
 # ---------------------------------------------------------------------------
 cat > ions.mdp << 'EOF'
 ; ions.mdp 
@@ -65,7 +122,7 @@ pbc               = xyz
 EOF
 
 cat > minim.mdp << 'EOF'
-; minim.mdp - 50,000 steps steepest descent, CHARMM36
+; minim.mdp - 50,000 steps steepest descent
 integrator        = steep
 emtol             = 1000.0
 emstep            = 0.01
@@ -82,7 +139,7 @@ pbc               = xyz
 EOF
 
 cat > nvt.mdp << 'EOF'
-; nvt.mdp - 100 ps NVT at 300 K, CHARMM36
+; nvt.mdp - 100 ps NVT at 300 K
 define                = -DPOSRES
 integrator            = md
 nsteps                = 50000
@@ -109,7 +166,7 @@ gen_seed              = -1
 EOF
 
 cat > npt.mdp << 'EOF'
-; npt.mdp - 100 ps NPT at 300 K / 1 bar, CHARMM36
+; npt.mdp - 100 ps NPT at 300 K / 1 bar
 define                = -DPOSRES
 integrator            = md
 nsteps                = 50000
@@ -136,7 +193,7 @@ refcoord_scaling      = com
 EOF
 
 cat > md.mdp << 'EOF'
-; md.mdp - 100 ns production, CHARMM36
+; md.mdp - 100 ns production
 integrator            = md
 dt                    = 0.002
 nsteps                = 50000000   ; 100 ns
@@ -163,12 +220,24 @@ nstenergy             = 5000
 nstlog                = 5000
 EOF
 
-echo "[1/3] CHARMM36 .mdp files written (rcoulomb=rvdw=1.2 nm, Force-switch vdW, no DispCorr)"
+echo "[1/3] .mdp files written (rcoulomb=rvdw=1.2 nm, Force-switch vdW, no DispCorr)"
 
 # ---------------------------------------------------------------------------
 # PREPROCESSING (runs directly here, no GPU needed, takes <1 min)
 # ---------------------------------------------------------------------------
 
+# TWO THINGS TO KNOW ABOUT THIS CALL, both left as-is:
+#
+#   1. NO -ff. GROMACS prompts for the force field and waits for an answer,
+#      so this script is not reproducible unattended and does not record
+#      what was chosen. The runs used AMBER99SB-ILDN. prep_vhl_peptide.sh
+#      pins the equivalent choice by piping "6\n1" into pdb2gmx.
+#
+#   2. NO -ignh either, despite the note that follows -- it describes a
+#      flag this call does not pass. Existing hydrogens are therefore kept
+#      rather than rebuilt, which is the opposite of what the note implies
+#      for AlphaFold output.
+#
 # -ignh strips any existing H atoms and lets GROMACS re-add them correctly
 # (important for AlphaFold outputs or PDB structures with non-standard H names)
 gmx_mpi pdb2gmx \
@@ -196,7 +265,9 @@ gmx_mpi grompp \
     -p topol.top \
     -o ions.tpr
 
-# SOL: select the solvent group for genion to replace with ions
+# SOL: select the solvent group for genion to replace with ions.
+# -neutral and no -conc: counter-ions to neutralise the net charge, and
+# nothing else. There is no 0.15 M background salt in these systems.
 echo "SOL" | gmx_mpi genion \
     -s ions.tpr \
     -o solv_ions.gro \
@@ -304,3 +375,11 @@ EOF
 
 chmod +x em.slurm nvt.slurm npt.slurm md.slurm
 echo "[3/3] SLURM stage scripts written: em.slurm nvt.slurm npt.slurm md.slurm"
+
+# NOT SUBMITTED. The header describes a dependency chain, but this script
+# ends here -- there is no sbatch call. Submit by hand, e.g.
+#   J=$(sbatch --parsable em.slurm)
+#   J=$(sbatch --parsable --dependency=afterok:$J nvt.slurm)
+#   J=$(sbatch --parsable --dependency=afterok:$J npt.slurm)
+#   sbatch --dependency=afterok:$J md.slurm
+# Left out rather than added, so the script keeps doing what it did.

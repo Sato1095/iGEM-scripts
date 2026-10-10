@@ -5,6 +5,21 @@ combine_topology.py
 Combines a GROMACS protein topology (from pdb2gmx) with a ligand topology
 (from ACPYPE/GAFF2) into a single complex ready for solvation and MD.
 
+WHAT THIS DID
+-------------
+Step 5 of prep_vhl_peptide.sh, which is the only thing that calls it.
+Merges the AMBER99SB-ILDN protein and the GAFF2 peptide into one system so
+run_pipeline_lig.sh can take over. Two jobs:
+
+  1. concatenate the two .gro coordinate blocks into complex.gro, keeping
+     the protein's box vectors
+  2. splice three things into topol.top -- the ligand #include after the
+     force-field #include, a POSRES_LIG block before [ system ], and the
+     ligand's line in [ molecules ]
+
+The ligand's molecule name is read out of the ACPYPE .itp rather than
+assumed, so it cannot drift from what the .itp actually declares.
+
 Usage:
     python3 combine_topology.py
 
@@ -17,6 +32,25 @@ Run from the folder containing:
 Outputs:
     complex.gro   -- combined coordinates (protein + ligand)
     topol.top     -- updated topology including ligand parameters
+
+TWO FRAGILITIES, LEFT AS THEY ARE
+---------------------------------
+1. topol.top IS EDITED IN PLACE, with no backup taken. If this script
+   fails partway, the topology is left half-modified and pdb2gmx has to be
+   re-run to recover it. The three edits are each guarded by a
+   "already present?" check, so re-running on a finished file is safe, but
+   re-running on a half-finished one is not reliably so.
+
+2. THE [ molecules ] ENTRY IS APPENDED AT END-OF-FILE, not inside the
+   section it belongs to: the code matches [ molecules ] to confirm it
+   exists, then writes the ligand line to the end of the whole file with
+   content.rstrip() + "\\n" + lig_entry. That is correct only while
+   [ molecules ] is the last section in topol.top, which is the normal
+   pdb2gmx layout and was true here. It would silently misplace the entry
+   in a topology with anything after that section.
+
+Neither is fixed, because both would change what the script does to the
+files it writes.
 """
 
 import sys

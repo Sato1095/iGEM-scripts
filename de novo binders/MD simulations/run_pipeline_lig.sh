@@ -2,8 +2,33 @@
 # =============================================================================
 # run_pipeline_lig.sh
 #
-# GROMACS 100 ns MD pipeline -- protein-ligand complex
-#   AMBER99SB-ILDN protein + GAFF2 ligand / cubic box / TIP3P / Cl- only
+# GROMACS 2022, 100 ns MD -- protein-ligand complex
+#   AMBER99SB-ILDN protein + GAFF2 ligand / cubic box / TIP3P /
+#   neutralising counter-ions only
+#
+# WHAT THIS DID
+#   The VHL - pHIF1 system, and any other system whose peptide had to be
+#   parametrised as a ligand. Picks up from prep_vhl_peptide.sh, which
+#   builds complex.gro and topol.top.
+#
+# INPUT
+#   complex.gro and topol.top, both from prep_vhl_peptide.sh
+#
+# PRODUCED
+#   the five .mdp files, index.ndx, solv_ions.gro, and four .slurm stage
+#   scripts, which are WRITTEN BUT NOT SUBMITTED (see the end of the file)
+#
+# RUN LENGTH: 100 ns HERE, 150 ns PUBLISHED
+#   md.mdp below is nsteps = 50000000 at dt = 0.002, which is exactly
+#   100 ns. The VHL - pHIF1 trajectory reported on the wiki is 150 ns: the
+#   run was continued past what this file specifies (team, Oct 2026).
+#   Running this script as committed reproduces the first 100 ns, not the
+#   published trajectory.
+#
+# IONIC STRENGTH: NEUTRALISING IONS ONLY
+#   genion is called with -neutral and no -conc, so there is no background
+#   salt. Any description of these runs as 0.15 M NaCl is wrong; the wiki
+#   and CLAUDE.md need correcting on this point.
 #
 # Same structure as run_pipeline.sh: preprocessing runs here, then
 # em -> nvt -> npt -> md are submitted as a SLURM dependency chain.
@@ -45,6 +70,9 @@ ION_NNAME="CL"
 GMX_MODULES="gcc/9.4.0-eewq4j6 openmpi/4.1.2-akxtzzl gromacs/2022-47qrtrj"
 PARTITION="gpu"
 EQ_TIME="02:00:00"
+# NOTE: PROD_TIME is never read. md.slurm below hardcodes --time=10:00:00
+# and --partition=ampere instead of using these two variables. See the
+# wall-time warning above md.slurm.
 PROD_TIME="24:00:00"
 
 # Mixing AMBER99SB-ILDN with GAFF2 raises a charge-sum warning on every grompp
@@ -192,6 +220,8 @@ gmx_mpi solvate -cp boxed.gro -cs spc216.gro -o solvated.gro -p topol.top
 gmx_mpi grompp -f ions.mdp -c solvated.gro -p topol.top -o ions.tpr \
     -maxwarn $MAXWARN
 
+# -neutral and no -conc: counter-ions to neutralise the net charge only.
+# No 0.15 M background salt in this system either.
 echo "SOL" | gmx_mpi genion -s ions.tpr -o solv_ions.gro -p topol.top \
     -pname "$ION_PNAME" -nname "$ION_NNAME" -neutral
 
@@ -290,6 +320,20 @@ gmx_mpi grompp -f npt.mdp -c nvt.gro -r nvt.gro -t nvt.cpt -p topol.top \\
 gmx_mpi mdrun -deffnm npt -nb gpu -pme gpu -update gpu -pin on
 EOF
 
+# WALL-TIME MISMATCH -- a real defect, left unfixed on purpose.
+#   --time=10:00:00 below, but mdrun is given -maxh 23.5, and the comment
+#   there says it exits cleanly "30 min before SLURM's hard kill". Those
+#   two cannot both be true: SLURM kills the job at 10 h, nearly 14 h
+#   before -maxh would trigger a checkpoint-and-exit, so a chunk that
+#   needs the full allocation dies without writing its final checkpoint.
+#   In practice md.cpt from the periodic checkpointing is still there to
+#   restart from, so runs completed -- but across more chunks than
+#   intended, and the clean-exit logic never fires.
+#   Either --time should be 24:00:00 (matching the unused PROD_TIME) or
+#   -maxh should be ~9.5. Not changed here: both alter what the job does.
+#
+# This stage also uses --partition=ampere and --cpus-per-task=8, where the
+# other three use $PARTITION (gpu) and 4. That part looks deliberate.
 cat > md.slurm << EOF
 #!/bin/bash
 #SBATCH --partition=ampere
@@ -323,3 +367,6 @@ EOF
 
 chmod +x em.slurm nvt.slurm npt.slurm md.slurm
 echo "[4/4] SLURM stage scripts written: em.slurm nvt.slurm npt.slurm md.slurm"
+
+# NOT SUBMITTED. As in run_pipeline.sh, the header describes a dependency
+# chain but no sbatch call exists; submit the four stages by hand.
