@@ -66,12 +66,9 @@ plt.rcParams.update({
 # ------------------------------------------------------------
 # Input / output
 # ------------------------------------------------------------
-# Both were absolute paths into a Windows OneDrive folder
-# (C:\Users\dimko\...\Inhibitor_Validation\results_chimerax\), so this script
-# ran on exactly one machine. Repointed at the committed copy of the same
-# table, which now sits beside this script. The output BASENAMES are
-# unchanged -- design_distribution.png / .pdf, now written to the working
-# directory instead of that folder.
+# Both relative to the working directory, so run this from this folder:
+# it reads the stage 3 table beside it and writes design_distribution.png
+# and design_distribution.pdf here.
 INPUT = "gate_filter_results_full.csv"
 
 OUTPUT_BASE = "design_distribution"
@@ -82,12 +79,10 @@ df = pd.read_csv(INPUT)
 # Recompute gates consistent with corrected site tolerance = 14 Å
 #
 # NOTE: nothing below reads gate_site or passed_gates -- neither panel uses
-# them, so this block has no effect on the figure. It is kept because it is
-# the only in-code record that 14 Å, not rank_binders.py's 8.0 Å default, is
-# the site tolerance the committed stage 3 table was produced with. The 14 Å
-# value is also what README.md's invocation passes via --site-tol.
-# Left as-is rather than removed: deleting it would erase that record, and
-# correcting the stale 8.0 default would change stage 3's behaviour.
+# them, so this block has no effect on the figure. It is kept as the record
+# that 14 Å, not rank_binders.py's 8.0 Å default, is the site tolerance the
+# committed stage 3 table was produced with. That is also what README.md's
+# invocation passes via --site-tol.
 # ------------------------------------------------------------
 df["gate_site"] = df["site_dist"] <= 14
 df["passed_gates"] = (
@@ -120,8 +115,7 @@ PMI = {
 # These are the three candidates the funnel produced: 42.3 = Z1,
 # 267.3 = Z2, 131.2 = Z3. The labels below name them by the role each
 # plays in the argument rather than by Z-number, so the legend reads as
-# bare "131.2" where the canonical naming is "Z3 (131.2)". Left as-is
-# because the strings are rendered figure content; flagged for the team.
+# bare "131.2" where the canonical naming is "Z3 (131.2)".
 # ------------------------------------------------------------
 PICKS = {
     (131, 2): dict(

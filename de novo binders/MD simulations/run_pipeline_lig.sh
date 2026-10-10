@@ -20,15 +20,13 @@
 #
 # RUN LENGTH: 100 ns HERE, 150 ns PUBLISHED
 #   md.mdp below is nsteps = 50000000 at dt = 0.002, which is exactly
-#   100 ns. The VHL - pHIF1 trajectory reported on the wiki is 150 ns: the
-#   run was continued past what this file specifies (team, Oct 2026).
-#   Running this script as committed reproduces the first 100 ns, not the
-#   published trajectory.
+#   100 ns. The published VHL - pHIF1 trajectory is 150 ns: the run was
+#   continued past what this file specifies, so this script alone gives
+#   the first 100 ns of it.
 #
 # IONIC STRENGTH: NEUTRALISING IONS ONLY
 #   genion is called with -neutral and no -conc, so there is no background
-#   salt. Any description of these runs as 0.15 M NaCl is wrong; the wiki
-#   and CLAUDE.md need correcting on this point.
+#   salt in this system.
 #
 # Same structure as run_pipeline.sh: preprocessing runs here, then
 # em -> nvt -> npt -> md are submitted as a SLURM dependency chain.
@@ -70,10 +68,7 @@ ION_NNAME="CL"
 GMX_MODULES="gcc/9.4.0-eewq4j6 openmpi/4.1.2-akxtzzl gromacs/2022-47qrtrj"
 PARTITION="gpu"
 EQ_TIME="02:00:00"
-# NOTE: PROD_TIME is never read. md.slurm below hardcodes --time=10:00:00
-# and --partition=ampere instead of using these two variables. See the
-# wall-time warning above md.slurm.
-PROD_TIME="24:00:00"
+PROD_TIME="24:00:00"  # per production chunk; the cluster's wall-time limit
 
 # Mixing AMBER99SB-ILDN with GAFF2 raises a charge-sum warning on every grompp
 MAXWARN=2
@@ -320,20 +315,14 @@ gmx_mpi grompp -f npt.mdp -c nvt.gro -r nvt.gro -t nvt.cpt -p topol.top \\
 gmx_mpi mdrun -deffnm npt -nb gpu -pme gpu -update gpu -pin on
 EOF
 
-# WALL-TIME MISMATCH -- a real defect, left unfixed on purpose.
-#   --time=10:00:00 below, but mdrun is given -maxh 23.5, and the comment
-#   there says it exits cleanly "30 min before SLURM's hard kill". Those
-#   two cannot both be true: SLURM kills the job at 10 h, nearly 14 h
-#   before -maxh would trigger a checkpoint-and-exit, so a chunk that
-#   needs the full allocation dies without writing its final checkpoint.
-#   In practice md.cpt from the periodic checkpointing is still there to
-#   restart from, so runs completed -- but across more chunks than
-#   intended, and the clean-exit logic never fires.
-#   Either --time should be 24:00:00 (matching the unused PROD_TIME) or
-#   -maxh should be ~9.5. Not changed here: both alter what the job does.
+# Production runs in 24 h chunks, the cluster's wall-time limit. mdrun is
+# given -maxh 23.5 so it checkpoints and exits cleanly half an hour before
+# SLURM would kill it; the next chunk restarts from md.cpt. A 100 ns run
+# does not finish in one chunk, so this is resubmitted until nsteps is
+# reached, at which point GROMACS exits on its own.
 #
-# This stage also uses --partition=ampere and --cpus-per-task=8, where the
-# other three use $PARTITION (gpu) and 4. That part looks deliberate.
+# This stage uses --partition=ampere and --cpus-per-task=8, where the other
+# three use $PARTITION (gpu) and 4.
 cat > md.slurm << EOF
 #!/bin/bash
 #SBATCH --partition=ampere
@@ -342,7 +331,7 @@ cat > md.slurm << EOF
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --gpus=1
-#SBATCH --time=10:00:00
+#SBATCH --time=$PROD_TIME
 #SBATCH --gpu-bind=closest
 
 module purge

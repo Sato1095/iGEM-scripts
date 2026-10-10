@@ -99,9 +99,8 @@ plt.close(fig)
 print("figure1 saved")
 
 # ------------------------------------------------------------------ FIGURE 2
-# Was an absolute /mnt/user-data/uploads/ path that existed only on the
-# machine this was first run on. Repointed at the committed copy of the same
-# table, which now sits beside this script, so the figure can be regenerated.
+# The stage 3 table, beside this script. Read relative to the working
+# directory, so run this from this folder.
 df = pd.read_csv("gate_filter_results_full.csv")
 df["key"] = df["design"].astype(str)+"."+df["n"].astype(str)
 PMI_BSA, PMI_CON = 40.0, 35

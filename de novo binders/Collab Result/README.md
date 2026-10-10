@@ -45,7 +45,6 @@ values untouched: `contigs = "100"`, `name = "test"`, `num_designs = 1`,
 4 sequences each, against the MDM2 cleft rather than a 100-residue
 unconditional backbone.
 
-So the notebook records the *method*, not the run. The actual generation
-parameters are not captured anywhere in this repository; the only durable
-evidence of them is the shape of `design.fasta` itself. Worth fixing by
-hand if the team still has the Colab session.
+So the notebook records the *method*, not the run. The generation parameters
+we actually used are not captured here; the only evidence of them is the
+shape of `design.fasta` itself.

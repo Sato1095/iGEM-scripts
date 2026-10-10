@@ -33,8 +33,8 @@ Outputs:
     complex.gro   -- combined coordinates (protein + ligand)
     topol.top     -- updated topology including ligand parameters
 
-TWO FRAGILITIES, LEFT AS THEY ARE
----------------------------------
+TWO FRAGILITIES
+---------------
 1. topol.top IS EDITED IN PLACE, with no backup taken. If this script
    fails partway, the topology is left half-modified and pdb2gmx has to be
    re-run to recover it. The three edits are each guarded by a
@@ -46,11 +46,8 @@ TWO FRAGILITIES, LEFT AS THEY ARE
    exists, then writes the ligand line to the end of the whole file with
    content.rstrip() + "\\n" + lig_entry. That is correct only while
    [ molecules ] is the last section in topol.top, which is the normal
-   pdb2gmx layout and was true here. It would silently misplace the entry
+   pdb2gmx layout and is true here. It would silently misplace the entry
    in a topology with anything after that section.
-
-Neither is fixed, because both would change what the script does to the
-files it writes.
 """
 
 import sys

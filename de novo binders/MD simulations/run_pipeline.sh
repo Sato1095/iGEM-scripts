@@ -25,20 +25,14 @@
 #
 # THE FORCE FIELD IS NOT PINNED BY THIS SCRIPT
 #   pdb2gmx below is called without -ff, so GROMACS prompts for the force
-#   field and it was answered by hand at run time. The runs used
-#   AMBER99SB-ILDN (team, Oct 2026), matching prep_vhl_peptide.sh, which
-#   does pin it. Earlier copies of this header said CHARMM36; that was
-#   wrong and has been corrected throughout.
-#
-#   Adding "-ff amber99sb-ildn" would make this reproducible without a
-#   human at the prompt. NOT added here, because it would change what the
-#   script does. Recommended for a future revision.
+#   field and it is answered at the prompt. The runs used AMBER99SB-ILDN,
+#   matching prep_vhl_peptide.sh, which pins it rather than asking.
+#   Passing "-ff amber99sb-ildn" would let this run unattended.
 #
 # IONIC STRENGTH: NEUTRALISING IONS ONLY
 #   genion is called with -neutral and no -conc, so the box carries only
-#   the counter-ions needed to neutralise the system -- there is no
-#   background salt. Any description of these runs as 0.15 M NaCl is
-#   wrong; the wiki and CLAUDE.md need correcting on this point.
+#   the counter-ions needed to neutralise the system. There is no
+#   background salt in these simulations.
 #
 # USAGE (run from the folder containing your PDB):
 #   bash run_pipeline.sh PMI-MDM2.pdb
@@ -226,17 +220,16 @@ echo "[1/3] .mdp files written (rcoulomb=rvdw=1.2 nm, Force-switch vdW, no DispC
 # PREPROCESSING (runs directly here, no GPU needed, takes <1 min)
 # ---------------------------------------------------------------------------
 
-# TWO THINGS TO KNOW ABOUT THIS CALL, both left as-is:
+# TWO THINGS TO KNOW ABOUT THIS CALL:
 #
 #   1. NO -ff. GROMACS prompts for the force field and waits for an answer,
-#      so this script is not reproducible unattended and does not record
-#      what was chosen. The runs used AMBER99SB-ILDN. prep_vhl_peptide.sh
-#      pins the equivalent choice by piping "6\n1" into pdb2gmx.
+#      so this does not run unattended and does not record what was
+#      chosen. The runs used AMBER99SB-ILDN. prep_vhl_peptide.sh pins the
+#      equivalent choice by piping "6\n1" into pdb2gmx.
 #
 #   2. NO -ignh either, despite the note that follows -- it describes a
-#      flag this call does not pass. Existing hydrogens are therefore kept
-#      rather than rebuilt, which is the opposite of what the note implies
-#      for AlphaFold output.
+#      flag this call does not pass. Existing hydrogens are kept rather
+#      than rebuilt, the opposite of what that note implies.
 #
 # -ignh strips any existing H atoms and lets GROMACS re-add them correctly
 # (important for AlphaFold outputs or PDB structures with non-standard H names)
@@ -382,4 +375,3 @@ echo "[3/3] SLURM stage scripts written: em.slurm nvt.slurm npt.slurm md.slurm"
 #   J=$(sbatch --parsable --dependency=afterok:$J nvt.slurm)
 #   J=$(sbatch --parsable --dependency=afterok:$J npt.slurm)
 #   sbatch --dependency=afterok:$J md.slurm
-# Left out rather than added, so the script keeps doing what it did.

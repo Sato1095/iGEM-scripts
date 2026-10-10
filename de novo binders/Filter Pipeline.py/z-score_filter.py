@@ -39,7 +39,6 @@ PRODUCED
         python3 z-score_filter.py design.fasta --tier stringent \
             --anchor-motif -o z-score_results.csv
 
-    Re-running that command reproduces the committed file exactly.
     Note the funnel figure in make_verdict_figures.py quotes stage 2 as
     "189 survivors", which is the `standard` tier, not the `stringent`
     tier committed here. Both are real runs of this script.
@@ -76,17 +75,16 @@ METRIC_DIRECTION = {"iptm": +1, "ipae": -1, "rmsd": -1, "plddt": +1}
 # --------------------------------------------------------------------------
 # Preset confidence-filter tiers: (iptm_min, ipae_max, rmsd_max, plddt_min).
 # This is the stage 2 "confidence filter". Survivors of the 2,000-candidate
-# pool, as re-run from Collab Result/design.fasta:
+# pool, from Collab Result/design.fasta:
 #
 #   stringent  0.80 / 5.0  / 1.5 / 0.85  ->  64 sequences,  34 backbones
 #   standard   0.70 / 10.0 / 2.0 / 0.80  -> 189 sequences,  85 backbones
 #   lenient    0.60 / 10.0 / 2.5 / 0.70  -> 289 sequences, 128 backbones
 #
 # PROVENANCE NOT RECORDED: these cutoffs are not attributed to a reference
-# anywhere in the project, and the team has not confirmed where they came
-# from. They are in the broad range conventionally used for AlphaFold
-# interface confidence (ipTM ~0.8 as a "confident interface" mark), but do
-# not cite them as taken from a source until that is settled.
+# anywhere in the project. They sit in the range conventionally used for
+# AlphaFold interface confidence (ipTM ~0.8 as a "confident interface"
+# mark), but should not be cited as taken from a source.
 # --------------------------------------------------------------------------
 TIERS = {
     "stringent": (0.80, 5.0, 1.5, 0.85),

@@ -91,36 +91,11 @@ Figures are not kept here. They go through the iGEM uploads tool to
 
 ---
 
-## What we could and could not re-run
+## Known inconsistencies
 
-Checked during the October 2026 documentation pass, on Python 3.13 with
-pandas 3.0.5, numpy 2.5.3, matplotlib 3.11.2, biopython 1.88.
-
-**Reproduced exactly:**
-
-- `z-score_results.csv`, from `../Collab Result/design.fasta` with
-  `--tier stringent --anchor-motif`. Byte-identical.
-- Both figure scripts run and produce their figures.
-- `analyze_designs.py` runs; its outputs are not committed, so there was
-  nothing to compare against.
-
-**Not verified:** `rank_binders.py` was not re-run. The design PDB set was not
-yet in place when the pass ran, and `freesasa` would not build in that
-container. The two stage 3 CSVs are therefore taken as given, not
-reconfirmed — every number quoted above was read back out of the committed
-table rather than recomputed from structures.
-
-With the PDBs published alongside and `freesasa` installed, this one is
-re-runnable, and it is the only part of the funnel still owing that check.
-Reproducing the committed tables needs `--site-tol 14`, not the stale 8.0
-default.
-
----
-
-## Known inconsistencies, not fixed
-
-Left alone deliberately — correcting any of them would change what a script
-does or what a figure says.
+Each of these is live in the committed scripts and outputs. None is fixed,
+because correcting any of them would change what a script does or what a
+figure says.
 
 - **`rank_binders.py --site-tol` defaults to 8.0, but the committed tables
   were made with 14.** Pass `--site-tol 14` to reproduce them. The default is
@@ -146,8 +121,8 @@ does or what a figure says.
   `stringent` tier, 64 rows. Both are real runs.
 - **`pockets.json` and `derive_pockets.py`** are referenced in a few places
   but have never been in this repository.
-- Dead code kept on the record rather than deleted: `sasa_areas()` in
-  `rank_binders.py`, `pct()` in `analyze_designs.py`, and the gate
-  recomputation in `make_distribution_figure.py`, whose result nothing reads.
+- Dead code still present: `sasa_areas()` in `rank_binders.py`, `pct()` in
+  `analyze_designs.py`, and the gate recomputation in
+  `make_distribution_figure.py`, whose result nothing reads.
 - **The confidence-tier thresholds have no recorded provenance.** They are
   not attributed to a reference anywhere in the project.

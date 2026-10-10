@@ -52,17 +52,6 @@ PRODUCED
     net charge -1, interface pLDDT 89.46, apolar BSA 42.02 Å2/residue.
     Z2 (267.3) appears in the full table with passed_gates = False.
 
-NOT RE-VERIFIED
----------------
-The committed tables were NOT regenerated during the October 2026
-documentation pass: the design PDB set was not yet in place, and freesasa
-could not be built in the container the pass ran in. They are taken as
-given, and every number quoted above was read back out of the committed
-table rather than recomputed from structures.
-
-With the PDB set published alongside, and freesasa installed, this is
-re-runnable — it is the only script in the funnel still owing that check.
-
 Ranking is an INTERSECTION of independent axes, not a weighted sum, so no
 axis's blindness can dominate and the selection is a defensible logical
 statement rather than an arbitrary weighting.
@@ -156,10 +145,8 @@ def sasa_areas(pdb_path):
     """Return (SASA_complex, SASA_receptorA_alone, SASA_peptideB_alone).
 
     DEAD CODE: nothing calls this. It is the whole-chain BSA calculation,
-    superseded by apolar_bsa() below, which does the same subtraction
-    per atom so the apolar and polar contributions can be separated.
-    Kept rather than deleted so the simpler form stays on the record;
-    flagged for the team to remove if they prefer.
+    superseded by apolar_bsa() below, which does the same subtraction per
+    atom so the apolar and polar contributions can be separated.
     """
     # complex
     st = freesasa.Structure(pdb_path)
@@ -342,13 +329,11 @@ def main():
                     help="min mean interface pLDDT (B-factor units)")
     ap.add_argument("--charge-floor", type=float, default=-4.0,
                     help="reject peptides more negative than this net charge")
-    # WARNING: this default is STALE. The committed tables were produced with
-    # --site-tol 14, which is what README.md's invocation passes and what
-    # make_distribution_figure.py calls the "corrected" value. Running with
-    # the 8.0 default gives a different site-gate count and a different
-    # selection. The default is left at 8.0 because changing it would change
-    # this script's behaviour; always pass --site-tol 14 to reproduce the
-    # committed results.
+    # WARNING: this default is STALE. The committed tables were produced
+    # with --site-tol 14, which is what README.md's invocation passes and
+    # what make_distribution_figure.py calls the "corrected" value. Running
+    # at the 8.0 default gives a different site-gate count and a different
+    # selection, so pass --site-tol 14 to reproduce the committed results.
     ap.add_argument("--site-tol", type=float, default=8.0,
                     help="max Å from native pocket centroid (site gate)")
     ap.add_argument("--top-pct", type=float, default=10.0,

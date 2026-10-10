@@ -46,8 +46,7 @@ TWO THINGS TO KNOW BEFORE QUOTING IT
 
    So Z1 (42.3) is the top composite pick only after the confidence
    filter. This script labels it "best / top-ranked" while its own table
-   puts it 8th. Left as-is — the labels are output content — but do not
-   cite a rank from here as the funnel's rank.
+   puts it 8th. Do not cite a rank from here as the funnel's rank.
 
 2. ITS THIRD PICK IS 130.3, NOT Z3. PICKS below names
    (130, 3) = MEEFKKLWEELMKKA, under the older "full mimic / minimal
@@ -60,9 +59,6 @@ TWO THINGS TO KNOW BEFORE QUOTING IT
    Biopython's charge_at_pH(7.4) (42.3 -> -2.75, 267.3 -> -8.74), while
    the chemistry gate uses a plain K+R-D-E count (-2.0, -8.0). The gate
    acted on the latter.
-
-Re-run and confirmed working during the 2026 documentation pass; its
-outputs are not committed, so there was nothing to compare them against.
 
 Usage
 -----
@@ -99,9 +95,9 @@ REFERENCES = {
 }
 
 # The three designs this script marks, keyed by (design_index, seq_index).
-# These labels are from the write-up as it stood when this was written. They
-# are NOT the current Z1/Z2/Z3 naming, and (130, 3) is not Z3 — see the
-# header. Left unchanged because the strings are plotted output.
+# These labels are from the write-up as it stood when this was written.
+# They are NOT the current Z1/Z2/Z3 naming, and (130, 3) is not Z3 — see
+# the header.
 PICKS = {
     (42, 3):  "42.3  (best / top-ranked)",
     (267, 3): "267.3 (minimal mimic)",
@@ -312,9 +308,8 @@ def main():
     df.sort_values("composite_rank").to_csv(out_csv, index=False)
 
     # ---- percentile summary for the picks ----
-    # DEAD CODE: pct() is never called. The rank_pct column below is computed
-    # inline from composite_rank instead. Kept rather than deleted; flagged
-    # for the team to remove if they prefer.
+    # DEAD CODE: pct() is never called. The rank_pct column below is
+    # computed inline from composite_rank instead.
     def pct(col, val, higher_is_better=True):
         p = (df[col] < val).mean() * 100
         return p if higher_is_better else 100 - p

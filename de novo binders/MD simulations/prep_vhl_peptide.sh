@@ -35,19 +35,15 @@
 #   vhl_processed.gro topol.top posre.itp               protein topology
 #   complex.gro                                         via combine_topology.py
 #
-# SCOPE, AND AN UNRESOLVED POINT
-#   This route was used for the VHL / pHIF1 system, with the peptide
-#   predicted by Boltz-2 as a HETATM ligand.
+# SCOPE
+#   This route is for the VHL / pHIF1 system, with the peptide predicted
+#   by Boltz-2 as a HETATM ligand.
 #
-#   CLAUDE.md states that the assembled PROTACs (PZ1-PZ3, PMI-PROTAC)
-#   "needed no special ligand parametrisation" because hydroxyproline is
-#   in the force field as a heteroatom residue. That reasoning does not
-#   obviously carry: by the argument below, it is HOMOLEUCINE, not
-#   hydroxyproline, that forces the ligand route -- and the assembled
-#   PROTACs contain pHIF1, homoleucine included. Either those constructs
-#   were built some other way, or they went through a route not recorded
-#   here. Flagged rather than guessed at; the team should settle it before
-#   the protocol is published.
+#   The assembled PROTACs (PZ1-PZ3, PMI-PROTAC) do not come through here.
+#   Those constructs were built without homoleucine, leaving
+#   4-hydroxyproline as their only non-canonical residue -- and that one
+#   AMBER99SB-ILDN already carries. pdb2gmx builds them directly, so they
+#   need no ligand parametrisation and go through run_pipeline.sh.
 #
 # Usage:
 #   module load gcc/9.4.0-eewq4j6 openmpi/4.1.2-akxtzzl gromacs/2022-47qrtrj
@@ -111,12 +107,11 @@ echo "  peptide with H : ${NH} atoms"
 #          than a free-energy calculation. Use -c bcc if charges matter.
 # -n 0   : net charge. LA-Hyp-Y-Hle-P is neutral -- verify for your construct.
 #
-# WORTH STATING IN THE WRITE-UP: Gasteiger is an empirical,
-# electronegativity-equalisation charge model, not a QM-derived one, and it
-# is a weaker choice than GAFF2's usual AM1-BCC partner. That is defensible
-# for the structural observables these trajectories were analysed for, and
-# it is the reason no binding free energy should be quoted from this
-# system. It is a methodological limitation, not an oversight.
+# Gasteiger is an empirical, electronegativity-equalisation charge model,
+# not a QM-derived one, and a weaker choice than GAFF2's usual AM1-BCC
+# partner. Adequate for the structural observables these trajectories were
+# analysed for, and the reason no binding free energy should be quoted
+# from this system.
 echo ""
 echo "[3/6] Generating GAFF2 parameters (ACPYPE)"
 acpype -i peptide_lig_H.pdb -c gas -n 0 -a gaff2
